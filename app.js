@@ -132,7 +132,7 @@ function clampImpostors() {
 }
 
 /* ---------- Bildschirm-Übergänge ---------- */
-const PHASE_ORDER = ["setup", "reveal", "game", "end"];
+const PHASE_ORDER = ["setup", "reveal", "game"];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let transitioning = Promise.resolve();
 
@@ -332,7 +332,8 @@ function startGame() {
     key: normalize(name),
     impostor: impostorIdx.has(i),
     out: false,
-    result: null // Text zum Ausscheiden
+    result: null, // Text zum Ausscheiden
+    tips: []
   }));
 
   game = {
@@ -430,55 +431,118 @@ async function onRevealTap() {
 }
 
 /* =========================================================
-   Diskussion / Abstimmung
+   Spielrunde: Tipps reihum, Votes, Imposter-Raten, Ergebnis
    ========================================================= */
-async function startDiscussion() {
-  $("reveal-back").innerHTML = ""; // Rolle nicht im DOM stehen lassen
-  const starter = pick(game.players);
-  $("game-starter").textContent = `${starter.name} beginnt mit dem ersten Hinweis.`;
-  renderGame();
-  await showPhase({
-    num: 3,
-    icon: "🗳️",
-    title: "Diskussion & Abstimmung",
-    text: `Alle Rollen sind verteilt!\nReihum gibt jeder einen Hinweis zum Begriff – ohne ihn zu verraten.\n\n${starter.name} beginnt.`,
-    button: "Zur Abstimmung",
-    phase: "game"
-  });
-  showScreen("game");
-}
-
 const activePlayers = () => game.players.filter((p) => !p.out);
 const activeImpostors = () => game.players.filter((p) => !p.out && p.impostor);
 
-function findActive(name) {
-  const key = normalize(name);
-  return game.players.find((p) => p.key === key && !p.out) || null;
+// Nächster aktiver Spieler in Sitzreihenfolge nach Index idx
+function nextActiveFrom(idx) {
+  const n = game.players.length;
+  for (let i = 1; i <= n; i++) {
+    const j = (idx + i) % n;
+    if (!game.players[j].out) return j;
+  }
+  return idx;
 }
+
+// Ist der Spieler am Zug ausgeschieden, geht der Zug an den nächsten.
+function fixTurn() {
+  if (game.players[game.turn].out) game.turn = nextActiveFrom(game.turn);
+}
+
+// Ein Vote ist möglich, sobald seit dem letzten Vote (bzw. Spielstart)
+// jeder aktive Spieler einen Tipp abgegeben hat.
+const voteReady = () => activePlayers().every((p) => game.sinceVote.has(p.key));
+const tipsUntilVote = () => activePlayers().filter((p) => !game.sinceVote.has(p.key)).length;
 
 function addLog(text) {
   game.log.push(text);
 }
 
+async function startDiscussion() {
+  $("reveal-back").innerHTML = ""; // Rolle nicht im DOM stehen lassen
+  game.turn = Math.floor(Math.random() * game.players.length);
+  game.sinceVote = new Set();
+  game.voteUnlocked = false; // wird nach der ersten vollen Runde true
+  game.vote = null;
+  const starter = game.players[game.turn];
+
+  $("screen-game").classList.remove("over");
+  $("result").hidden = true;
+  renderGame();
+  await showPhase({
+    num: 3,
+    icon: "🗣️",
+    title: "Spielrunde",
+    text: `Alle Rollen sind verteilt!\nReihum gibt jeder einen Tipp zum Begriff ab – ohne ihn zu verraten.\nNach jeder vollen Runde könnt ihr einen Vote starten.\n\n${starter.name} beginnt.`,
+    button: "Los geht's",
+    phase: "game"
+  });
+  showScreen("game");
+}
+
 function renderGame() {
-  const wrap = $("game-players");
+  const active = activePlayers();
+  $("game-sub").textContent = game.over
+    ? "Das Spiel ist vorbei."
+    : `${active.length} im Spiel · ${activeImpostors().length} Imposter übrig`;
+  $("game-status").textContent = `${active.length}/${game.players.length} aktiv`;
+
+  if (!game.over) {
+    // Wer ist dran?
+    const current = game.players[game.turn];
+    $("turn-name").textContent = current.name;
+    $("tip-input").placeholder = `${current.name}, dein Tipp zum Begriff`;
+
+    // Vote-Bereich
+    const ready = voteReady();
+    $("vote-card").hidden = !game.voteUnlocked;
+    $("btn-vote").hidden = !ready;
+    $("vote-card").classList.toggle("ready", ready);
+    $("vote-status").textContent = ready ? "bereit" : "gesperrt";
+    const left = tipsUntilVote();
+    $("vote-hint").textContent = ready
+      ? "Alle haben einen Tipp abgegeben. Ihr könnt jetzt abstimmen – oder weiter Tipps geben."
+      : `Nächster Vote möglich nach ${left} weiteren ${left === 1 ? "Tipp" : "Tipps"}.`;
+  }
+
+  // Profile
+  const wrap = $("profiles");
   wrap.innerHTML = "";
-  for (const p of game.players) {
-    const chip = makeChip(p.name, false, null);
-    if (p.out) chip.classList.add("out");
-    wrap.appendChild(chip);
-  }
+  game.players.forEach((p, i) => {
+    const el = document.createElement("div");
+    el.className = "profile";
+    let badge = "";
+    if (game.over) {
+      el.classList.add(p.impostor ? "role-imp" : "role-crew");
+      if (p.out) el.classList.add("out");
+      badge = p.impostor ? "Imposter" : "Spieler";
+    } else if (p.out) {
+      el.classList.add("out");
+      badge = "Raus";
+    } else if (i === game.turn) {
+      el.classList.add("current");
+      badge = "Am Zug";
+    } else if (game.sinceVote.has(p.key)) {
+      el.classList.add("tipped");
+      badge = "✓ Tipp";
+    }
+    const tips = p.tips.length
+      ? `<ol class="tips">${p.tips.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`
+      : `<p class="tips-empty">Noch kein Tipp</p>`;
+    const note = game.over && p.result ? `<p class="profile-note">${escapeHtml(p.result)}</p>` : "";
+    el.innerHTML = `
+      <div class="profile-head">
+        <span class="avatar">${escapeHtml(p.name.charAt(0).toUpperCase())}</span>
+        <span class="profile-name">${escapeHtml(p.name)}</span>
+        ${badge ? `<span class="badge">${badge}</span>` : ""}
+      </div>
+      ${tips}${note}`;
+    wrap.appendChild(el);
+  });
 
-  const dl = $("active-players");
-  dl.innerHTML = "";
-  for (const p of activePlayers()) {
-    const o = document.createElement("option");
-    o.value = p.name;
-    dl.appendChild(o);
-  }
-
-  $("game-status").textContent = `${activePlayers().length} im Spiel · ${activeImpostors().length} Imposter übrig`;
-
+  // Verlauf
   const logEl = $("game-log");
   logEl.innerHTML = "";
   for (const entry of game.log) {
@@ -489,101 +553,231 @@ function renderGame() {
   $("log-card").hidden = game.log.length === 0;
 }
 
-async function onVote(e) {
+/* ---------- Tipp abgeben ---------- */
+function onTip(e) {
   e.preventDefault();
-  const input = $("vote-name");
-  const name = input.value.trim();
-  if (!name) return;
+  if (game.over) return;
+  const input = $("tip-input");
+  const text = input.value.trim();
+  if (!text) {
+    input.focus();
+    return;
+  }
+  const p = game.players[game.turn];
+  const wasReady = voteReady();
+  p.tips.push(text);
+  game.sinceVote.add(p.key);
+  game.turn = nextActiveFrom(game.turn);
+  input.value = "";
 
-  const p = findActive(name);
+  if (!wasReady && voteReady()) {
+    game.voteUnlocked = true;
+    addLog("Runde komplett – ein Vote ist jetzt möglich.");
+  }
+  renderGame();
+}
+
+/* ---------- Vote ---------- */
+function startVote() {
+  if (game.over || !voteReady()) return;
+  // Abgestimmt wird in Sitzreihenfolge, beginnend beim Spieler am Zug
+  const voters = [];
+  let i = game.turn;
+  do {
+    if (!game.players[i].out) voters.push(game.players[i]);
+    i = (i + 1) % game.players.length;
+  } while (i !== game.turn);
+  game.vote = { voters, index: 0, ballots: new Map(), done: false };
+  $("vote-cancel").hidden = false;
+  $("vote-panel").hidden = false;
+  showVoteStep("handoff");
+}
+
+function showVoteStep(step) {
+  const v = game.vote;
+  ["handoff", "choose", "result"].forEach((s) => { $("vote-" + s).hidden = s !== step; });
+  $("vote-progress").textContent = step === "result" ? "Auswertung" : `Stimme ${v.index + 1} von ${v.voters.length}`;
+
+  if (step === "handoff") {
+    const voter = v.voters[v.index];
+    $("vote-voter").textContent = voter.name;
+    $("vote-ready").textContent = `Ich bin ${voter.name} – abstimmen`;
+  }
+
+  if (step === "choose") {
+    const voter = v.voters[v.index];
+    $("vote-question").textContent = `${voter.name}, wen wählst du raus?`;
+    const opts = $("vote-options");
+    opts.innerHTML = "";
+    for (const p of activePlayers()) {
+      if (p === voter) continue;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn vote-option";
+      b.textContent = p.name;
+      b.addEventListener("click", () => castBallot(p));
+      opts.appendChild(b);
+    }
+    const abstain = document.createElement("button");
+    abstain.type = "button";
+    abstain.className = "btn ghost vote-option abstain";
+    abstain.textContent = "Enthalten";
+    abstain.addEventListener("click", () => castBallot(null));
+    opts.appendChild(abstain);
+  }
+  $("vote-panel").querySelector(".overlay-box").scrollTop = 0;
+}
+
+function castBallot(target) {
+  const v = game.vote;
+  v.ballots.set(v.voters[v.index].key, target);
+  v.index++;
+  if (v.index < v.voters.length) showVoteStep("handoff");
+  else finishVote();
+}
+
+function finishVote() {
+  const v = game.vote;
+  v.done = true;
+  $("vote-cancel").hidden = true;
+
+  const counts = new Map();
+  let abstentions = 0;
+  for (const target of v.ballots.values()) {
+    if (!target) abstentions++;
+    else counts.set(target, (counts.get(target) || 0) + 1);
+  }
+  const ranking = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const top = ranking.length ? ranking[0][1] : 0;
+  const leaders = ranking.filter(([, c]) => c === top);
+
+  // Raus ist, wer allein die meisten Stimmen hat – und mehr Stimmen als Enthaltungen.
+  let eliminated = null;
+  if (top > 0 && leaders.length === 1 && top > abstentions) eliminated = leaders[0][0];
+  v.eliminated = eliminated;
+
+  // Auszählung anzeigen
+  const tally = $("vote-tally");
+  tally.innerHTML = "";
+  for (const [p, c] of ranking) {
+    const li = document.createElement("li");
+    li.textContent = `${p.name}: ${c} ${c === 1 ? "Stimme" : "Stimmen"}`;
+    tally.appendChild(li);
+  }
+  if (abstentions) {
+    const li = document.createElement("li");
+    li.textContent = `Enthaltungen: ${abstentions}`;
+    tally.appendChild(li);
+  }
+
+  if (!eliminated) {
+    $("vote-result-emoji").textContent = "🤷";
+    $("vote-result-title").textContent = "Niemand scheidet aus";
+    $("vote-result-text").textContent = top === 0
+      ? "Alle haben sich enthalten."
+      : leaders.length > 1 ? "Gleichstand – keine Entscheidung." : "Die Enthaltungen überwiegen.";
+  } else if (eliminated.impostor) {
+    $("vote-result-emoji").textContent = "🎯";
+    $("vote-result-title").textContent = `${eliminated.name} war ein Imposter!`;
+    $("vote-result-text").textContent = `${eliminated.name} ist raus.`;
+  } else {
+    $("vote-result-emoji").textContent = "😱";
+    $("vote-result-title").textContent = `${eliminated.name} war unschuldig!`;
+    $("vote-result-text").textContent = `${eliminated.name} war kein Imposter.`;
+  }
+  showVoteStep("result");
+}
+
+function closeVote() {
+  const v = game.vote;
+  $("vote-panel").hidden = true;
+  game.vote = null;
+  if (!v || !v.done) return; // abgebrochen → Vote nicht verbraucht
+
+  // Nach einem Vote muss erst wieder jeder einen Tipp abgeben
+  game.sinceVote = new Set();
+  const p = v.eliminated;
+
   if (!p) {
-    await showModal({ emoji: "❓", title: "Unbekannter Name", text: `„${name}“ ist kein aktiver Spieler.` });
+    addLog("Vote: niemand ist ausgeschieden.");
+    renderGame();
     return;
   }
 
-  const ok = await showModal({
-    emoji: "🗳️",
-    title: `${p.name} rauswählen?`,
-    text: "Seid ihr euch sicher?",
-    ok: "Ja, raus!",
-    cancel: "Abbrechen"
-  });
-  if (!ok) return;
-
-  input.value = "";
   p.out = true;
-
   if (!p.impostor) {
     p.result = "rausgewählt (war unschuldig)";
-    addLog(`${p.name} wurde rausgewählt – war KEIN Imposter.`);
+    addLog(`Vote: ${p.name} wurde rausgewählt – war KEIN Imposter.`);
     endGame("impostor", `${p.name} war unschuldig und wurde rausgewählt.`);
     return;
   }
 
   p.result = "rausgewählt";
-  addLog(`${p.name} wurde rausgewählt – war ein Imposter!`);
-
+  addLog(`Vote: ${p.name} wurde rausgewählt – war ein Imposter!`);
   if (activeImpostors().length === 0) {
     endGame("crew", "Alle Imposter wurden enttarnt.");
     return;
   }
-
+  fixTurn();
   renderGame();
-  await showModal({
-    emoji: "🎯",
-    title: `${p.name} war ein Imposter!`,
-    text: `Es sind noch ${activeImpostors().length} Imposter im Spiel. Weiter geht's!`
-  });
+}
+
+/* ---------- Imposter rät den Begriff ---------- */
+function openGuess() {
+  if (game.over) return;
+  const sel = $("guess-name");
+  sel.innerHTML = `<option value="">Wer bist du?</option>`;
+  for (const p of activePlayers()) {
+    const o = document.createElement("option");
+    o.value = p.key;
+    o.textContent = p.name;
+    sel.appendChild(o);
+  }
+  $("guess-word").value = "";
+  $("guess-word").type = "password";
+  $("guess-panel").hidden = false;
+}
+
+function closeGuess() {
+  $("guess-panel").hidden = true;
+  $("guess-word").value = "";
+  $("guess-name").value = "";
 }
 
 async function onGuess(e) {
   e.preventDefault();
-  const nameInput = $("guess-name");
-  const wordInput = $("guess-word");
-  const name = nameInput.value.trim();
-  const guess = wordInput.value.trim();
+  const key = $("guess-name").value;
+  const guess = $("guess-word").value.trim();
 
-  if (!name || !guess) {
-    await showModal({ emoji: "✍️", title: "Fehlende Angaben", text: "Bitte Spielernamen UND Begriff eingeben." });
+  if (!key || !guess) {
+    await showModal({ emoji: "✍️", title: "Fehlende Angaben", text: "Bitte wähle deinen Namen und gib den Begriff ein." });
     return;
   }
-
-  const p = findActive(name);
-  if (!p) {
-    await showModal({ emoji: "❓", title: "Unbekannter Name", text: `„${name}“ ist kein aktiver Spieler.` });
-    return;
-  }
+  const p = game.players.find((x) => x.key === key && !x.out);
+  if (!p) return;
   if (!p.impostor) {
-    wordInput.value = "";
+    $("guess-word").value = "";
     await showModal({ emoji: "🚫", title: "Nicht erlaubt", text: "Nur Imposter dürfen den Begriff raten." });
     return;
   }
 
-  // Eingaben sofort löschen, damit niemand den geratenen Begriff sieht
-  nameInput.value = "";
-  wordInput.value = "";
-  wordInput.type = "password";
+  closeGuess(); // Eingabe sofort weg, damit niemand den Begriff sieht
 
   const correct = isCorrectGuess(guess, game.entry, !!game.category.person);
   const wasLast = activeImpostors().length === 1;
   p.out = true;
   p.result = correct ? "hat den Begriff erraten 🏆" : "hat falsch geraten";
-  p.guessedRight = correct;
 
   if (wasLast) {
     // Einziger (verbleibender) Imposter: entscheidet das ganze Spiel
-    if (correct) {
-      addLog(`${p.name} hat den Begriff richtig erraten.`);
-      endGame("impostor", `${p.name} hat den Begriff erraten!`);
-    } else {
-      addLog(`${p.name} hat falsch geraten und ist ausgeschieden.`);
-      endGame("crew", `${p.name} hat den Begriff falsch geraten.`);
-    }
+    addLog(`${p.name} hat ${correct ? "richtig" : "falsch"} geraten.`);
+    endGame(correct ? "impostor" : "crew", correct ? `${p.name} hat den Begriff erraten!` : `${p.name} hat den Begriff falsch geraten.`);
     return;
   }
 
   // Mehrere Imposter: persönlicher Sieg/Niederlage, Spiel läuft weiter, Begriff bleibt geheim
   addLog(`${p.name} hat ${correct ? "richtig" : "falsch"} geraten und ist ausgeschieden.`);
+  fixTurn();
   renderGame();
   await showModal({
     emoji: correct ? "🏆" : "💥",
@@ -593,21 +787,10 @@ async function onGuess(e) {
   });
 }
 
-/* =========================================================
-   Spielende
-   ========================================================= */
-async function endGame(winner, reason) {
+/* ---------- Spielende (auf derselben Seite) ---------- */
+function endGame(winner, reason) {
   game.over = true;
-  await showPhase({
-    num: 4,
-    icon: "🔍",
-    title: "Auflösung",
-    text: "Das Spiel ist vorbei …\nWer hat gewonnen?",
-    button: "Ergebnis anzeigen",
-    phase: "end",
-    suspense: true
-  });
-  const banner = $("end-banner");
+  const banner = $("result");
   banner.classList.remove("crew", "impostor");
   banner.classList.add(winner);
   $("end-emoji").textContent = winner === "crew" ? "🎉" : "🕵️";
@@ -616,15 +799,10 @@ async function endGame(winner, reason) {
   $("end-word").textContent = game.word;
   $("end-category").textContent = `${game.category.icon} ${game.category.name}`;
 
-  const list = $("end-impostors");
-  list.innerHTML = "";
-  for (const p of game.players.filter((x) => x.impostor)) {
-    const li = document.createElement("li");
-    li.textContent = `${p.name} – ${p.result || "nicht enttarnt"}`;
-    list.appendChild(li);
-  }
-
-  showScreen("end");
+  $("screen-game").classList.add("over");
+  banner.hidden = false;
+  renderGame();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function abortGame() {
@@ -654,12 +832,21 @@ document.addEventListener("DOMContentLoaded", () => {
   $("opt-hint").addEventListener("change", (e) => { settings.hint = e.target.checked; saveSettings(); });
   $("btn-start").addEventListener("click", startGame);
   $("reveal-card").addEventListener("click", onRevealTap);
-  $("form-vote").addEventListener("submit", onVote);
+
+  $("form-tip").addEventListener("submit", onTip);
+  $("btn-vote").addEventListener("click", startVote);
+  $("vote-ready").addEventListener("click", () => showVoteStep("choose"));
+  $("vote-done").addEventListener("click", closeVote);
+  $("vote-cancel").addEventListener("click", closeVote);
+
+  $("btn-guess").addEventListener("click", openGuess);
+  $("guess-cancel").addEventListener("click", closeGuess);
   $("form-guess").addEventListener("submit", onGuess);
   $("toggle-secret").addEventListener("click", () => {
     const w = $("guess-word");
     w.type = w.type === "password" ? "text" : "password";
   });
+
   $("btn-abort").addEventListener("click", abortGame);
   $("btn-again").addEventListener("click", startGame);
   $("btn-setup").addEventListener("click", () => { renderSetup(); showScreen("setup"); });

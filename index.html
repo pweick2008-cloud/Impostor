@@ -16,9 +16,7 @@
       <div class="step-line"></div>
       <div class="step" data-phase="reveal"><span class="dot">2</span><span class="label">Rollen</span></div>
       <div class="step-line"></div>
-      <div class="step" data-phase="game"><span class="dot">3</span><span class="label">Abstimmung</span></div>
-      <div class="step-line"></div>
-      <div class="step" data-phase="end"><span class="dot">4</span><span class="label">Ergebnis</span></div>
+      <div class="step" data-phase="game"><span class="dot">3</span><span class="label">Spiel</span></div>
     </nav>
 
     <!-- ============ ÜBERGANG ZWISCHEN DEN PHASEN ============ -->
@@ -100,72 +98,113 @@
       <p class="muted center small">Niemand sonst darf auf den Bildschirm schauen!</p>
     </section>
 
-    <!-- ============ SPIEL / ABSTIMMUNG ============ -->
+    <!-- ============ SPIEL: TIPPS, VOTES & ERGEBNIS ============ -->
     <section id="screen-game" class="screen">
       <header class="title">
-        <h1>🗳️ Diskussion</h1>
-        <p class="sub" id="game-starter"></p>
+        <h1>🗣️ Spielrunde</h1>
+        <p class="sub" id="game-sub"></p>
       </header>
 
+      <!-- Ergebnis (erscheint am Spielende auf derselben Seite) -->
+      <div id="result" class="end-banner" hidden>
+        <span id="end-emoji" class="end-emoji"></span>
+        <h1 id="end-title"></h1>
+        <p id="end-reason"></p>
+        <div class="result-word">
+          <span class="role-label">Der Begriff war</span>
+          <span class="word-reveal" id="end-word"></span>
+          <span class="muted small" id="end-category"></span>
+        </div>
+        <div class="result-actions">
+          <button id="btn-again" class="btn primary big" type="button">Neue Runde (gleiche Spieler)</button>
+          <button id="btn-setup" class="btn ghost" type="button">Zurück zu den Einstellungen</button>
+        </div>
+      </div>
+
+      <!-- Wer ist dran? -->
+      <form id="form-tip" class="card turn-card in-game" autocomplete="off">
+        <span class="role-label">Am Zug</span>
+        <span class="turn-name" id="turn-name"></span>
+        <input id="tip-input" type="text" placeholder="Dein Tipp zum Begriff" maxlength="40" autocomplete="off" spellcheck="false">
+        <button class="btn primary" type="submit">Tipp abgeben</button>
+      </form>
+
+      <!-- Vote (erst nach der ersten vollen Runde sichtbar) -->
+      <div id="vote-card" class="card vote-card in-game" hidden>
+        <div class="row-between">
+          <h2>Abstimmung</h2>
+          <span class="pill" id="vote-status"></span>
+        </div>
+        <p class="muted small" id="vote-hint"></p>
+        <button id="btn-vote" class="btn danger" type="button">Vote starten</button>
+      </div>
+
+      <!-- Profile aller Spieler -->
       <div class="card">
         <div class="row-between">
           <h2>Spieler</h2>
           <span class="pill" id="game-status"></span>
         </div>
-        <div id="game-players" class="chips static"></div>
+        <div id="profiles" class="profiles"></div>
       </div>
 
-      <form id="form-vote" class="card" autocomplete="off">
-        <h2>Verdächtigen rauswählen</h2>
-        <p class="muted small">Name des vermuteten Imposters eingeben.</p>
-        <input id="vote-name" list="active-players" placeholder="Spielername" autocomplete="off" autocapitalize="words">
-        <button class="btn danger" type="submit">Rauswählen</button>
-      </form>
-
-      <form id="form-guess" class="card" autocomplete="off">
-        <h2>Imposter rät den Begriff</h2>
-        <p class="muted small">Nur für Imposter. Richtig = gewonnen, falsch = verloren. Danach ist man so oder so raus – die anderen erfahren den Begriff nicht.</p>
-        <input id="guess-name" list="active-players" placeholder="Dein Spielername" autocomplete="off" autocapitalize="words">
-        <div class="secret-input">
-          <input id="guess-word" type="password" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <button type="button" id="toggle-secret" class="eye" aria-label="Eingabe anzeigen">👁️</button>
-        </div>
-        <button class="btn primary" type="submit">Begriff raten</button>
-      </form>
-
-      <datalist id="active-players"></datalist>
+      <button id="btn-guess" class="btn imp in-game" type="button">🕵️ Imposter: Begriff raten</button>
 
       <div class="card" id="log-card" hidden>
         <h2>Verlauf</h2>
         <ul id="game-log" class="log"></ul>
       </div>
 
-      <button id="btn-abort" class="btn ghost">Spiel abbrechen</button>
-    </section>
-
-    <!-- ============ ENDE ============ -->
-    <section id="screen-end" class="screen">
-      <div class="end-banner" id="end-banner">
-        <span id="end-emoji" class="end-emoji"></span>
-        <h1 id="end-title"></h1>
-        <p id="end-reason"></p>
-      </div>
-
-      <div class="card">
-        <h2>Der Begriff war</h2>
-        <p class="word-reveal" id="end-word"></p>
-        <p class="muted center small" id="end-category"></p>
-      </div>
-
-      <div class="card">
-        <h2>Imposter</h2>
-        <ul id="end-impostors" class="log"></ul>
-      </div>
-
-      <button id="btn-again" class="btn primary big">Neue Runde (gleiche Spieler)</button>
-      <button id="btn-setup" class="btn ghost">Zurück zu den Einstellungen</button>
+      <button id="btn-abort" class="btn ghost in-game" type="button">Spiel abbrechen</button>
     </section>
   </main>
+
+  <!-- Abstimmung: Gerät wird reihum weitergegeben, jede Stimme ist geheim -->
+  <div id="vote-panel" class="overlay" hidden>
+    <div class="overlay-box">
+      <p class="progress" id="vote-progress"></p>
+
+      <div id="vote-handoff" class="vote-step">
+        <span class="hand">📱</span>
+        <span class="small">Gib das Gerät an</span>
+        <span class="big-name" id="vote-voter"></span>
+        <button id="vote-ready" class="btn primary big" type="button"></button>
+      </div>
+
+      <div id="vote-choose" class="vote-step" hidden>
+        <h2 id="vote-question"></h2>
+        <div id="vote-options" class="vote-options"></div>
+      </div>
+
+      <div id="vote-result" class="vote-step" hidden>
+        <span class="hand" id="vote-result-emoji"></span>
+        <h2 id="vote-result-title"></h2>
+        <p class="muted" id="vote-result-text"></p>
+        <ul id="vote-tally" class="log"></ul>
+        <button id="vote-done" class="btn primary big" type="button">Weiter</button>
+      </div>
+
+      <button id="vote-cancel" class="btn ghost" type="button">Vote abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Imposter rät den Begriff -->
+  <div id="guess-panel" class="overlay" hidden>
+    <form id="form-guess" class="overlay-box" autocomplete="off">
+      <span class="hand">🕵️</span>
+      <h2>Begriff raten</h2>
+      <p class="muted small">Nur für Imposter. Richtig = gewonnen, falsch = verloren. Danach ist man so oder so raus – die anderen erfahren den Begriff nicht.</p>
+      <select id="guess-name"></select>
+      <div class="secret-input">
+        <input id="guess-word" type="password" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="button" id="toggle-secret" class="eye" aria-label="Eingabe anzeigen">👁️</button>
+      </div>
+      <div class="modal-actions">
+        <button id="guess-cancel" class="btn ghost" type="button">Abbrechen</button>
+        <button class="btn primary" type="submit">Raten</button>
+      </div>
+    </form>
+  </div>
 
   <!-- Hinweis-Dialog -->
   <div id="modal" class="modal" hidden>

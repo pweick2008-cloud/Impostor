@@ -26,7 +26,7 @@ html, body {
 }
 
 #app {
-  max-width: 520px;
+  max-width: 640px;
   margin: 0 auto;
   padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
 }
@@ -264,3 +264,87 @@ input:focus { border-color: var(--primary); }
 .modal-box p { color: var(--muted); margin: 0 0 18px; white-space: pre-line; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-actions .btn { flex: 1; }
+
+/* ===== Spielrunde ===== */
+.screen.over .in-game { display: none !important; }
+
+.turn-card { align-items: stretch; text-align: center; border-color: var(--primary); background: linear-gradient(160deg, #2e2350, var(--card)); }
+.turn-card .role-label { text-align: center; }
+.turn-name { font-size: 2rem; font-weight: 800; word-break: break-word; animation: rise .35s ease both; }
+
+.vote-card { animation: rise .45s ease both; }
+.vote-card.ready { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(239, 68, 68, .15); }
+.vote-card.ready .pill { color: #fecaca; border-color: var(--danger); }
+
+.btn.imp { background: transparent; border: 1px dashed var(--impostor); color: #fecaca; }
+
+/* Profile */
+.profiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px; }
+.profile {
+  min-width: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color .3s, opacity .3s, transform .3s;
+}
+.profile-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card); border: 1px solid var(--border); font-weight: 700;
+}
+.profile-name { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: .7rem; padding: 3px 7px; border-radius: 999px; background: var(--card); color: var(--muted); white-space: nowrap; }
+.tips { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
+.tips li { overflow-wrap: anywhere; }
+.tips-empty { margin: 0; font-size: .85rem; color: var(--muted); font-style: italic; }
+.profile-note { margin: 0; font-size: .8rem; color: var(--muted); }
+
+.profile.current { border-color: var(--primary-2); box-shadow: 0 0 0 3px rgba(139, 92, 246, .3); transform: translateY(-2px); }
+.profile.current .badge { background: var(--primary); color: #fff; }
+.profile.current .avatar { background: var(--primary); border-color: var(--primary-2); }
+.profile.tipped .badge { color: #bbf7d0; }
+.profile.out { opacity: .5; }
+.profile.out .profile-name { text-decoration: line-through; }
+.profile.role-imp { border-color: var(--impostor); opacity: 1; }
+.profile.role-imp .badge { background: var(--impostor); color: #fff; }
+.profile.role-crew .badge { background: #14532d; color: #bbf7d0; }
+
+/* Ergebnis auf der Spielseite */
+#result { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+#result[hidden] { display: none; }
+.result-word { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0; }
+.result-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+/* Overlays (Vote & Raten) */
+.overlay {
+  position: fixed; inset: 0; z-index: 8;
+  background: rgba(5, 3, 12, .88);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; animation: fade .2s ease both;
+}
+.overlay[hidden] { display: none; }
+.overlay-box {
+  width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--border); border-radius: 22px;
+  padding: 20px; display: flex; flex-direction: column; gap: 12px; text-align: center;
+  animation: pop-box .3s cubic-bezier(.2,.8,.2,1) both;
+}
+.overlay-box h2 { margin: 0; font-size: 1.3rem; }
+.overlay-box p { margin: 0; }
+.vote-step { display: flex; flex-direction: column; align-items: center; gap: 12px; animation: rise .3s ease both; }
+.vote-step[hidden] { display: none; }
+.vote-step .btn { width: 100%; }
+.vote-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; width: 100%; }
+.vote-option { border: 1px solid var(--border); }
+.vote-option.abstain { grid-column: 1 / -1; }
+#vote-tally { width: 100%; text-align: left; }
+
+select {
+  width: 100%; font-size: 1rem; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg-2); color: var(--text);
+}
