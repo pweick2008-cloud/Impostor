@@ -498,3 +498,75 @@ button.term-box { cursor: pointer; }
 }
 .toast.toast-in { animation: toast-in .3s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ===== Lügenduell ===== */
+.mode-tag {
+  align-self: flex-start; margin-top: 4px; font-size: .75rem; font-weight: 600;
+  padding: 3px 9px; border-radius: 999px; background: #3b2f12; color: #fde68a;
+}
+
+.num-row { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.num-btn {
+  appearance: none; font: inherit; font-weight: 800; font-size: 1.1rem; color: var(--text);
+  aspect-ratio: 1; max-width: 100%; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-2);
+  font-variant-numeric: tabular-nums; transition: transform .1s, background .15s, border-color .15s;
+}
+.num-btn.card-btn { aspect-ratio: 3 / 4; border-radius: 8px; background: linear-gradient(160deg, #2e2350, var(--bg-2)); }
+.num-btn.selected { background: var(--primary); border-color: var(--primary-2); transform: translateY(-3px); }
+.num-btn:disabled { opacity: .2; cursor: default; transform: none; }
+.trap-preview { margin: 0; color: var(--primary-2); font-weight: 600; }
+
+.lu-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.lu-player {
+  min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.lu-player.me { border-style: dashed; }
+.lu-player.attacking { border-color: var(--primary-2); box-shadow: 0 0 0 3px rgba(139, 92, 246, .25); }
+.lu-score { display: flex; align-items: baseline; gap: 6px; }
+.lu-points { font-size: 2.2rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.lu-meta { display: flex; flex-direction: column; gap: 4px; font-size: .88rem; color: var(--muted); }
+.lu-meta strong { color: var(--text); }
+.lu-hand { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+.mini-card {
+  display: inline-flex; align-items: center; justify-content: center;
+  aspect-ratio: 3 / 4; border-radius: 5px; font-size: .8rem; font-weight: 700;
+  background: var(--bg-2); border: 1px solid var(--border); font-variant-numeric: tabular-nums;
+}
+.mini-card.used { opacity: .2; text-decoration: line-through; }
+.lu-nums { display: inline-grid; grid-template-columns: repeat(3, 32px); gap: 6px; }
+
+.lu-action { gap: 12px; }
+.lu-action h2 { font-size: .95rem; margin-top: 4px; }
+.lu-action[hidden] { display: none !important; }
+#lu-att-claim .btn.selected, .lu-choice .btn.selected { background: var(--primary); border-color: var(--primary-2); }
+.lu-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lu-choice .joker { grid-column: 1 / -1; border: 1px dashed var(--impostor); }
+.lu-hint { margin: 0; font-size: .92rem; color: var(--muted); }
+.lu-hint.good { color: #bbf7d0; }
+.lu-hint.bad { color: #fca5a5; }
+
+.lu-statement { display: flex; align-items: center; gap: 14px; }
+.lu-statement-text { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lu-card {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 56px; aspect-ratio: 3 / 4; border-radius: 10px;
+  font-size: 1.8rem; font-weight: 900; font-variant-numeric: tabular-nums;
+  background: linear-gradient(160deg, #f5f3ff, #ddd6fe); color: #2e1065;
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+}
+.lu-card.back { background: repeating-linear-gradient(45deg, #4c1d95 0 8px, #5b21b6 8px 16px); color: #ddd6fe; }
+.lu-card.big { width: 88px; font-size: 2.8rem; animation: pop .5s cubic-bezier(.2,.8,.2,1) both; }
+.lu-reveal-cards { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.lu-rev-side { display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 600; }
+.lu-vs { color: var(--muted); font-weight: 700; }
+.lu-gain { margin: 0; text-align: center; font-weight: 800; font-size: 1.1rem; color: var(--primary-2); }
+
+.table-wrap { overflow-x: auto; }
+.lu-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.lu-table th, .lu-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.lu-table th { color: var(--muted); font-weight: 600; }
+.lu-table td.num { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lu-rules summary { cursor: pointer; font-weight: 700; }
+.lu-rules ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }

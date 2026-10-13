@@ -15,8 +15,9 @@ const { shuffle, pick, normalize, isCorrectGuess, displayWord, pickWord } = requ
 
 const PORT = process.env.PORT || 3000;
 const MIN_PLAYERS = 3; // Verräter
-const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2 };
-const GAME_TYPES = ["verraeter", "werbinich"];
+const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2, luegen: 2 };
+const MAX_PLAYERS_BY_GAME = { verraeter: 20, werbinich: 20, luegen: 2 };
+const GAME_TYPES = ["verraeter", "werbinich", "luegen"];
 const MAX_PLAYERS = 20;
 const LOBBY_IDLE_MS = 30 * 60 * 1000; // leere Lobbys werden nach 30 Min. gelöscht
 const DIFFICULTIES = ["leicht", "mittel", "schwer", "gemischt"];
@@ -33,7 +34,8 @@ const STATIC = {
   "/shared.js": ["shared.js", "text/javascript; charset=utf-8"],
   "/words.js": ["words.js", "text/javascript; charset=utf-8"],
   "/wbi.js": ["wbi.js", "text/javascript; charset=utf-8"],
-  "/wbi-online.js": ["wbi-online.js", "text/javascript; charset=utf-8"]
+  "/wbi-online.js": ["wbi-online.js", "text/javascript; charset=utf-8"],
+  "/luegen-online.js": ["luegen-online.js", "text/javascript; charset=utf-8"]
 };
 
 const server = http.createServer((req, res) => {
@@ -116,11 +118,16 @@ function viewFor(lobby, me) {
     hostId: lobby.hostId,
     gameType: lobby.gameType,
     minPlayers: MIN_PLAYERS_BY_GAME[lobby.gameType],
+    maxPlayers: MAX_PLAYERS_BY_GAME[lobby.gameType],
     settings: lobby.settings,
     players: lobby.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected })),
     game: null
   };
   if (!g) return view;
+  if (g.type === "luegen") {
+    view.game = luView(lobby, g, me);
+    return view;
+  }
   if (g.type === "werbinich") {
     view.game = wbiView(lobby, g, me);
     return view;
@@ -330,6 +337,7 @@ function finishVote(lobby) {
 function dropFromGame(lobby, id) {
   const g = lobby.game;
   if (g && g.type === "werbinich") return wbiDrop(lobby, id);
+  if (g && g.type === "luegen") return luDrop(lobby, id);
   if (!g || g.phase === "over" || !g.order.includes(id) || g.out.has(id)) return;
   g.out.add(id);
   g.results[id] = "hat das Spiel verlassen";
@@ -427,7 +435,9 @@ const handlers = {
     const name = cleanName(msg.name);
     if (!normalize(name)) fail("Bitte gib einen Namen ein.");
     if (lobby.game && lobby.game.phase !== "over") fail("Das Spiel läuft gerade. Tritt bei, sobald die Runde vorbei ist.");
-    if (lobby.players.length >= MAX_PLAYERS) fail("Die Lobby ist voll.");
+    if (lobby.players.length >= MAX_PLAYERS_BY_GAME[lobby.gameType]) {
+      fail(lobby.gameType === "luegen" ? "Die Lobby ist voll – Lügenduell spielt man zu zweit." : "Die Lobby ist voll.");
+    }
     if (lobby.players.some((p) => p.key === normalize(name))) fail(`Der Name „${name}“ ist in dieser Lobby schon vergeben.`);
 
     leaveCurrent(ws);
@@ -467,7 +477,9 @@ const handlers = {
     if (lobby.game && lobby.game.phase !== "over") fail("Das Spiel läuft bereits.");
     const min = MIN_PLAYERS_BY_GAME[lobby.gameType];
     if (lobby.players.length < min) fail(`Ihr braucht mindestens ${min} Spieler.`);
-    if (lobby.gameType === "werbinich") wbiStart(lobby);
+    if (lobby.players.length > MAX_PLAYERS_BY_GAME[lobby.gameType]) fail("Zu viele Spieler für dieses Spiel.");
+    if (lobby.gameType === "luegen") luStart(lobby);
+    else if (lobby.gameType === "werbinich") wbiStart(lobby);
     else startGame(lobby);
     return lobby;
   },
@@ -874,6 +886,299 @@ Object.assign(handlers, {
     g.question = null;
     wbiNextTurn(g);
     g.log.push(`${g.names[skipped]} wurde übersprungen.`);
+    return lobby;
+  }
+});
+
+
+/* =========================================================
+   Lügenduell – nur online, genau 2 Spieler
+   - Jeder hat die Karten 1–9, einen Fallenjoker und Lügnerjoker
+     (wer beginnt: 2, der andere: 3).
+   - Vor Spielbeginn stellt jeder eine Falle: eine Karte des Gegners und
+     eine Rundenspanne von höchstens 3 Runden.
+   - 9 Runden, die Rollen wechseln jede Runde. Der Angreifer legt verdeckt
+     eine Karte, macht dazu eine Aussage, die auf 3 Zahlen einschränkt, und
+     legt fest, ob sie wahr oder gelogen ist. Der Verteidiger glaubt ihr
+     oder nicht (optional mit Lügnerjoker) und legt dann seine Karte.
+   ========================================================= */
+const LU_ROUNDS = 9;
+const LU_TRAP_POINTS = { 1: 9, 2: 6, 3: 3 }; // Spanne → Punkte
+
+function luStart(lobby) {
+  const ids = lobby.players.map((p) => p.id);
+  const starter = pick(ids);
+  const other = ids.find((id) => id !== starter);
+  const g = {
+    type: "luegen",
+    phase: "setup", // setup → play → over
+    ids: [starter, other], // Runde 1 greift der Startspieler an, danach abwechselnd
+    names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
+    starter,
+    jokers: { [starter]: 2, [other]: 3 },
+    hand: { [starter]: [1, 2, 3, 4, 5, 6, 7, 8, 9], [other]: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
+    trap: { [starter]: null, [other]: null },
+    trapState: { [starter]: "offen", [other]: "offen" }, // offen | ausgelöst | verpasst
+    score: { [starter]: 0, [other]: 0 },
+    round: 1,
+    step: "attack", // attack → defend → reveal
+    move: null,
+    ready: new Set(),
+    history: [],
+    log: [],
+    result: null
+  };
+  lobby.game = g;
+}
+
+const luAttacker = (g) => g.ids[(g.round - 1) % 2];
+const luDefender = (g) => g.ids[g.round % 2];
+const luOpp = (g, id) => g.ids.find((x) => x !== id);
+
+function luView(lobby, g, me) {
+  const over = g.phase === "over";
+  const inGame = g.ids.includes(me.id);
+  const opp = inGame ? luOpp(g, me.id) : null;
+  const m = g.move;
+  const attacker = luAttacker(g);
+  const players = g.ids.map((id) => {
+    const p = lobby.players.find((x) => x.id === id);
+    const own = id === me.id;
+    const trap = g.trap[id];
+    const showTrap = own || over || g.trapState[id] !== "offen";
+    return {
+      id,
+      name: g.names[id],
+      connected: !!(p && p.connected),
+      score: g.score[id],
+      jokers: g.jokers[id],
+      hand: g.hand[id], // gespielte Karten sind ohnehin aufgedeckt
+      trapSet: !!trap,
+      trap: showTrap && trap ? { ...trap, points: LU_TRAP_POINTS[trap.to - trap.from + 1] } : null,
+      trapState: g.trapState[id],
+      starter: id === g.starter
+    };
+  });
+
+  let move = null;
+  if (m) {
+    const iAmAttacker = me.id === attacker;
+    const revealed = g.step === "reveal";
+    move = {
+      text: m.text,
+      nums: m.nums,
+      // Karte und Wahrheit/Lüge sieht der Verteidiger erst nach dem Aufdecken
+      card: iAmAttacker || revealed ? m.card : null,
+      claim: iAmAttacker || revealed ? m.claim : null,
+      defense: revealed || me.id !== attacker ? m.defense || null : m.defense ? "done" : null,
+      defCard: revealed || me.id !== attacker ? m.defCard || null : null
+    };
+  }
+
+  return {
+    type: "luegen",
+    phase: g.phase,
+    inGame,
+    you: me.id,
+    opp,
+    players,
+    round: g.round,
+    rounds: LU_ROUNDS,
+    step: g.step,
+    attacker,
+    defender: luDefender(g),
+    move,
+    lastResult: g.step === "reveal" ? g.history[g.history.length - 1] : null,
+    ready: [...g.ready],
+    history: g.history,
+    log: g.log,
+    result: g.result
+  };
+}
+
+function luResolve(lobby) {
+  const g = lobby.game;
+  const m = g.move;
+  const att = luAttacker(g);
+  const def = luDefender(g);
+  const a = m.card;
+  const d = m.defCard;
+  const lines = [];
+
+  // Kartenvergleich
+  let winner = null;
+  let pts = 0;
+  const diff = Math.abs(a - d);
+  if (diff >= 2) {
+    winner = a > d ? att : def;
+    pts = Math.max(a, d);
+    lines.push(`${g.names[winner]} gewinnt mit der höheren Karte (Differenz ${diff}) und bekommt ${pts} Punkte.`);
+  } else if (diff === 1) {
+    winner = a < d ? att : def;
+    pts = a + d;
+    lines.push(`Differenz 1: ${g.names[winner]} gewinnt mit der niedrigeren Karte und bekommt die Summe ${pts} Punkte.`);
+  } else {
+    lines.push("Beide haben die gleiche Karte gelegt – keine Punkte.");
+  }
+
+  let attGain = winner === att ? pts : 0;
+  let defGain = winner === def ? pts : 0;
+  const lied = m.claim === "lie";
+  const jokersBefore = g.jokers[def];
+
+  if (m.defense === "joker") {
+    g.jokers[def]--;
+    if (lied) {
+      defGain += 2;
+      if (attGain) lines.push(`Lügnerjoker richtig! ${g.names[att]} hat gelogen und verliert ${attGain} Punkte, ${g.names[def]} bekommt 2 Punkte.`);
+      else lines.push(`Lügnerjoker richtig! ${g.names[att]} hat gelogen, ${g.names[def]} bekommt 2 Punkte.`);
+      attGain = 0;
+    } else {
+      defGain += 1;
+      lines.push(`Lügnerjoker daneben – ${g.names[att]} hat die Wahrheit gesagt. ${g.names[def]} bekommt trotzdem 1 Punkt.`);
+    }
+  } else if (lied) {
+    if (jokersBefore > 0) {
+      attGain += 2;
+      lines.push(`${g.names[att]} hat erfolgreich gelogen: +2 Punkte.`);
+    } else {
+      lines.push(`${g.names[att]} hat gelogen – das bringt nichts mehr, weil ${g.names[def]} keine Lügnerjoker mehr hat.`);
+    }
+  }
+
+  // Fallen: Spielt der Gegner die Fallenkarte in der Spanne, gibt es Punkte
+  const trapGain = { [att]: 0, [def]: 0 };
+  for (const owner of g.ids) {
+    const trap = g.trap[owner];
+    if (!trap || g.trapState[owner] !== "offen") continue;
+    const victim = luOpp(g, owner);
+    const played = victim === att ? a : d;
+    if (played !== trap.card) continue;
+    if (g.round >= trap.from && g.round <= trap.to) {
+      const p = LU_TRAP_POINTS[trap.to - trap.from + 1];
+      trapGain[owner] = p;
+      g.trapState[owner] = "ausgelöst";
+      lines.push(`🪤 Falle! ${g.names[victim]} hat die ${trap.card} in Runde ${g.round} gespielt – ${g.names[owner]} bekommt ${p} Punkte.`);
+    } else {
+      g.trapState[owner] = "verpasst"; // Karte ist weg, die Falle kann nicht mehr zuschnappen
+    }
+  }
+
+  const gain = { [att]: attGain + trapGain[att], [def]: defGain + trapGain[def] };
+  g.score[att] += gain[att];
+  g.score[def] += gain[def];
+
+  g.history.push({
+    round: g.round,
+    attacker: att,
+    text: m.text,
+    nums: m.nums,
+    claim: m.claim,
+    card: a,
+    defense: m.defense,
+    defCard: d,
+    gain,
+    lines
+  });
+  g.log.push(`Runde ${g.round}: ${g.names[att]} ${a} – ${d} ${g.names[def]} (${gain[att]}:${gain[def]})`);
+  g.step = "reveal";
+  g.ready = new Set();
+}
+
+function luFinish(lobby, reason) {
+  const g = lobby.game;
+  const [x, y] = g.ids;
+  const winner = g.score[x] === g.score[y] ? null : g.score[x] > g.score[y] ? x : y;
+  // Fallen, die nie ausgelöst wurden, gelten als verpasst
+  for (const id of g.ids) if (g.trapState[id] === "offen") g.trapState[id] = "verpasst";
+  g.result = { winner, reason: reason || (winner ? `${g.names[winner]} gewinnt mit ${g.score[winner]} Punkten!` : "Unentschieden!") };
+  g.phase = "over";
+  g.move = null;
+}
+
+function luDrop(lobby, id) {
+  const g = lobby.game;
+  if (g.phase === "over" || !g.ids.includes(id)) return;
+  const opp = luOpp(g, id);
+  g.log.push(`${g.names[id]} hat das Spiel verlassen.`);
+  luFinish(lobby);
+  g.result = { winner: opp, reason: `${g.names[id]} hat das Spiel verlassen – ${g.names[opp]} gewinnt.` };
+}
+
+function luInt(v, min, max) {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < min || n > max) fail("Ungültige Zahl.");
+  return n;
+}
+
+Object.assign(handlers, {
+  luTrap(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "setup", "luegen");
+    if (!g.ids.includes(me.id)) fail("Du spielst nicht mit.");
+    const card = luInt(msg.card, 1, 9);
+    const from = luInt(msg.from, 1, LU_ROUNDS);
+    const to = luInt(msg.to, 1, LU_ROUNDS);
+    if (to < from) fail("Die Spanne muss mit der kleineren Runde beginnen.");
+    if (to - from + 1 > 3) fail("Die Spanne darf höchstens 3 Runden lang sein.");
+    g.trap[me.id] = { card, from, to };
+    if (g.ids.every((id) => g.trap[id])) {
+      g.phase = "play";
+      g.log.push(`Beide Fallen sind gestellt. ${g.names[luAttacker(g)]} beginnt.`);
+    }
+    return lobby;
+  },
+
+  luAttack(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "play", "luegen");
+    if (g.step !== "attack" || luAttacker(g) !== me.id) fail("Du bist gerade nicht dran.");
+    const card = luInt(msg.card, 1, 9);
+    if (!g.hand[me.id].includes(card)) fail("Diese Karte hast du schon gespielt.");
+    const text = String(msg.text || "").trim().replace(/\s+/g, " ").slice(0, 80);
+    if (!normalize(text)) fail("Bitte schreib eine Aussage zu deiner Karte.");
+    const nums = [...new Set((Array.isArray(msg.nums) ? msg.nums : []).map((n) => luInt(n, 1, 9)))].sort((x, y) => x - y);
+    if (nums.length !== 3) fail("Wähle genau 3 Zahlen, auf die deine Aussage zutrifft.");
+    const claim = msg.claim === "lie" ? "lie" : msg.claim === "truth" ? "truth" : null;
+    if (!claim) fail("Wähle, ob deine Aussage die Wahrheit oder eine Lüge ist.");
+    const inSet = nums.includes(card);
+    if (claim === "truth" && !inSet) fail(`Deine Karte ${card} ist nicht unter ${nums.join(", ")} – das wäre eine Lüge.`);
+    if (claim === "lie" && inSet) fail(`Deine Karte ${card} ist unter ${nums.join(", ")} – das wäre die Wahrheit.`);
+
+    g.hand[me.id] = g.hand[me.id].filter((c) => c !== card);
+    g.move = { card, text, nums, claim, defense: null, defCard: null };
+    g.step = "defend";
+    return lobby;
+  },
+
+  luDefend(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "play", "luegen");
+    if (g.step !== "defend" || luDefender(g) !== me.id) fail("Du bist gerade nicht dran.");
+    const defense = ["believe", "doubt", "joker"].includes(msg.defense) ? msg.defense : null;
+    if (!defense) fail("Glaubst du der Aussage oder nicht?");
+    if (defense === "joker" && g.jokers[me.id] <= 0) fail("Du hast keine Lügnerjoker mehr.");
+    const card = luInt(msg.card, 1, 9);
+    if (!g.hand[me.id].includes(card)) fail("Diese Karte hast du schon gespielt.");
+    g.hand[me.id] = g.hand[me.id].filter((c) => c !== card);
+    g.move.defense = defense;
+    g.move.defCard = card;
+    luResolve(lobby);
+    return lobby;
+  },
+
+  luNext(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "play", "luegen");
+    if (g.step !== "reveal" || !g.ids.includes(me.id)) return lobby;
+    g.ready.add(me.id);
+    const opponentGone = g.ids.some((id) => !lobby.players.find((p) => p.id === id && p.connected));
+    if (g.ids.every((id) => g.ready.has(id)) || opponentGone) {
+      if (g.round >= LU_ROUNDS) {
+        luFinish(lobby);
+      } else {
+        g.round++;
+        g.step = "attack";
+        g.move = null;
+        g.ready = new Set();
+      }
+    }
     return lobby;
   }
 });

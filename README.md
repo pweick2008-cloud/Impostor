@@ -1,9 +1,10 @@
 # 🎲 Partyspiele
 
-Zwei Spiele, jeweils als **Pass & Play** (ein Gerät) oder **Online** (jeder mit eigenem Gerät):
+Drei Spiele:
 
-- **🕵️ Verräter** – alle kennen einen geheimen Begriff, nur die Verräter nicht.
-- **🙋 Wer bin ich?** – jeder bekommt eine Person, die alle kennen außer ihm selbst.
+- **🕵️ Verräter** – alle kennen einen geheimen Begriff, nur die Verräter nicht. Pass & Play oder online.
+- **🙋 Wer bin ich?** – jeder bekommt eine Person, die alle kennen außer ihm selbst. Pass & Play oder online.
+- **🃏 Lügenduell** – Karten, Aussagen, Lügen und Fallen. Nur online, genau 2 Spieler.
 
 Auf der Startseite wählt man das Spiel, danach den Modus:
 
@@ -68,6 +69,18 @@ Hinweis: Der kostenlose Plan schläft nach 15 Minuten ohne Besucher ein. Der ers
 - Unter dem eigenen Profil steht ein Textfeld zum Raten der eigenen Person.
 
 Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine Rolle; bei Personen reicht auch der Nachname. Das Spiel endet, wenn höchstens noch ein Spieler seine Person nicht erraten hat.
+
+## 🃏 Lügenduell (nur online, 2 Spieler)
+
+- Jeder hat die Karten **1–9**, einen **Fallenjoker** und **Lügnerjoker**: Wer beginnt, bekommt 2, der andere 3. Jede Karte kann nur einmal gelegt werden.
+- **Vor dem Spiel** stellt jeder eine **Falle**: eine Karte des Gegners und eine Rundenspanne von höchstens 3 Runden (z. B. Karte 4 in Runde 5–7). Spielt der Gegner die Karte in der Spanne, gibt es Punkte: 3 Runden = 3, 2 Runden = 6, 1 Runde = 9.
+- Es gibt **9 Runden**, die Rollen wechseln jede Runde.
+- Wer zuerst legt, wählt verdeckt eine Karte, macht eine **Aussage** dazu (z. B. „Primzahl“), wählt die **3 Zahlen**, auf die sie zutrifft, und legt fest, ob sie **wahr oder gelogen** ist. Das Spiel prüft, ob Karte und Wahrheit/Lüge zusammenpassen.
+- Der andere **glaubt** der Aussage oder **nicht** – und kann dabei einen **Lügnerjoker** setzen. Danach legt er seine Karte, beide Karten werden aufgedeckt.
+- **Auswertung:** Differenz ≥ 2 → die höhere Karte gewinnt ihren Wert. Differenz 1 → die niedrigere Karte gewinnt die Summe beider Karten. Gleiche Karten → keine Punkte.
+- **Lügnerjoker** richtig → +2 Punkte, der Lügner verliert seine Punkte dieser Runde. Falsch → trotzdem +1 Punkt, der andere behält seine Punkte.
+- Eine **unentdeckte Lüge** bringt +2 Punkte – aber nur, solange der Gegner noch Lügnerjoker hat.
+- Wer nach 9 Runden die meisten Punkte hat, gewinnt.
 
 ## Kategorien (Verräter)
 Länder · Historische Persönlichkeiten · Promis · Deutsche Streamer · Obst & Gemüse (oder zufällig) – jeweils in **leicht**, **mittel**, **schwer** oder **gemischt**.

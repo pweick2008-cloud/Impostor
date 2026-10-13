@@ -175,7 +175,7 @@
     if (screen === "o-reveal") roleShown = false;
     if (screen === "o-game") myRoleShown = false;
     lastScreen = screen;
-    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game" }[screen];
+    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game", "lu-setup": "trap", "lu-game": "game" }[screen];
     showScreen(screen, phase);
   }
 
@@ -185,7 +185,9 @@
     currentMode = "online";
     currentGame = state.gameType;
     const g = state.game;
-    if (g && g.inGame && g.type === "werbinich") {
+    if (g && g.inGame && g.type === "luegen") {
+      goto(LUOnline.render(state));
+    } else if (g && g.inGame && g.type === "werbinich") {
       goto(WBIOnline.render(state));
     } else if (!g || !g.inGame) {
       renderLobby();
@@ -203,7 +205,7 @@
   function renderLobby() {
     const host = isHost();
     $("lobby-code").textContent = state.code;
-    $("lobby-count").textContent = `${state.players.length}/20`;
+    $("lobby-count").textContent = `${state.players.length}/${state.maxPlayers}`;
 
     const list = $("lobby-players");
     list.innerHTML = "";

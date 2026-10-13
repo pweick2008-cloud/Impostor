@@ -45,6 +45,14 @@
           <span class="mode-desc">Jeder bekommt eine Person, die alle kennen außer ihm selbst. Findet mit Ja/Nein-Fragen heraus, wer ihr seid.</span>
         </span>
       </button>
+      <button class="mode-card game-card" type="button" data-game="luegen">
+        <span class="mode-icon">🃏</span>
+        <span class="mode-text">
+          <span class="mode-title">Lügenduell</span>
+          <span class="mode-desc">Karten 1–9, Aussagen, Lügen und Fallen. Durchschau deinen Gegner in 9 Runden.</span>
+          <span class="mode-tag">Nur online · genau 2 Spieler</span>
+        </span>
+      </button>
     </section>
 
     <!-- ============ MODUSWAHL ============ -->
@@ -55,6 +63,7 @@
         <h1 id="menu-title">Verräter</h1>
         <p class="sub" id="menu-sub">Einer kennt den Begriff nicht. Findet ihn!</p>
       </header>
+      <p id="menu-only-online" class="muted small center" hidden>Dieses Spiel gibt es nur online – für genau 2 Spieler.</p>
       <button id="menu-local" class="mode-card" type="button">
         <span class="mode-icon">📱</span>
         <span class="mode-text">
@@ -350,6 +359,133 @@
       <button class="btn ghost wo-leave" type="button">Lobby verlassen</button>
     </section>
 
+
+    <!-- ============ LÜGENDUELL (NUR ONLINE) ============ -->
+    <section id="screen-lu-setup" class="screen">
+      <header class="title">
+        <h1>🪤 Falle stellen</h1>
+        <p class="sub" id="lu-setup-sub"></p>
+      </header>
+      <div class="card">
+        <p class="small muted">Wähle eine Karte deines Gegners und eine Rundenspanne von höchstens 3 Runden. Spielt er diese Karte in der Spanne, bekommst du Punkte: <strong>3 Runden = 3 P.</strong>, <strong>2 Runden = 6 P.</strong>, <strong>1 Runde = 9 P.</strong></p>
+      </div>
+      <div class="card">
+        <h2>Fallenkarte</h2>
+        <div id="lu-trap-cards" class="num-row"></div>
+      </div>
+      <div class="card">
+        <h2>Ab Runde</h2>
+        <div id="lu-trap-from" class="num-row"></div>
+        <h2>Spanne</h2>
+        <div id="lu-trap-len" class="chips"></div>
+        <p class="trap-preview" id="lu-trap-preview"></p>
+      </div>
+      <button id="lu-trap-submit" class="btn primary big" type="button">Falle stellen</button>
+      <p id="lu-trap-status" class="muted small center" hidden></p>
+      <div class="card">
+        <h2>Bereit?</h2>
+        <ul id="lu-setup-list" class="lobby-players"></ul>
+      </div>
+      <button class="btn ghost lu-leave" type="button">Lobby verlassen</button>
+    </section>
+
+    <section id="screen-lu-game" class="screen">
+      <header class="title">
+        <h1>🃏 Lügenduell</h1>
+        <p class="sub" id="lu-sub"></p>
+      </header>
+
+      <div id="lu-result" class="end-banner" hidden>
+        <span id="lu-end-emoji" class="end-emoji"></span>
+        <h1 id="lu-end-title"></h1>
+        <p id="lu-end-reason"></p>
+        <div class="result-actions">
+          <button id="lu-again" class="btn primary big" type="button">Revanche</button>
+          <button id="lu-to-lobby" class="btn ghost" type="button">Zurück zur Lobby</button>
+          <p id="lu-wait-host" class="muted small center" hidden>Warte auf den Host …</p>
+        </div>
+      </div>
+
+      <div id="lu-board" class="lu-board"></div>
+
+      <!-- Angreifer: Karte, Aussage, 3 Zahlen, Wahrheit/Lüge -->
+      <form id="lu-attack" class="card lu-action in-game" autocomplete="off" hidden>
+        <span class="role-label">Du legst zuerst</span>
+        <h2>1. Welche Karte legst du verdeckt?</h2>
+        <div id="lu-att-cards" class="num-row"></div>
+        <h2>2. Deine Aussage zur Karte</h2>
+        <input id="lu-att-text" type="text" maxlength="80" placeholder="z. B. „Es ist eine Primzahl“" autocomplete="off">
+        <h2>3. Auf welche 3 Zahlen trifft die Aussage zu?</h2>
+        <div id="lu-att-nums" class="num-row"></div>
+        <h2>4. Ist deine Aussage wahr?</h2>
+        <div id="lu-att-claim" class="answer-buttons">
+          <button type="button" class="btn" data-claim="truth">✅ Wahrheit</button>
+          <button type="button" class="btn" data-claim="lie">🤥 Lüge</button>
+        </div>
+        <p id="lu-att-hint" class="lu-hint"></p>
+        <button id="lu-att-submit" class="btn primary big" type="submit">Karte verdeckt legen</button>
+      </form>
+
+      <!-- Verteidiger: glauben / nicht glauben / Lügnerjoker, dann Karte -->
+      <form id="lu-defend" class="card lu-action in-game" autocomplete="off" hidden>
+        <span class="role-label" id="lu-def-label"></span>
+        <div class="lu-statement">
+          <span class="lu-card back">?</span>
+          <div class="lu-statement-text">
+            <span class="question-text" id="lu-def-text"></span>
+            <span class="lu-nums" id="lu-def-nums"></span>
+          </div>
+        </div>
+        <h2>1. Glaubst du der Aussage?</h2>
+        <div id="lu-def-choice" class="lu-choice"></div>
+        <h2>2. Welche Karte legst du?</h2>
+        <div id="lu-def-cards" class="num-row"></div>
+        <button id="lu-def-submit" class="btn primary big" type="submit">Karte legen &amp; aufdecken</button>
+      </form>
+
+      <!-- Warten auf den Gegner -->
+      <div id="lu-wait" class="card lu-action in-game" hidden>
+        <span class="hand">⏳</span>
+        <p id="lu-wait-text" class="center"></p>
+      </div>
+
+      <!-- Aufdecken & Auswertung -->
+      <div id="lu-reveal" class="card lu-action" hidden>
+        <span class="role-label" id="lu-rev-label"></span>
+        <div class="lu-reveal-cards">
+          <div class="lu-rev-side"><span class="lu-card big" id="lu-rev-att"></span><span id="lu-rev-att-name"></span></div>
+          <span class="lu-vs">vs</span>
+          <div class="lu-rev-side"><span class="lu-card big" id="lu-rev-def"></span><span id="lu-rev-def-name"></span></div>
+        </div>
+        <p class="center" id="lu-rev-statement"></p>
+        <ul id="lu-rev-lines" class="log"></ul>
+        <p class="lu-gain" id="lu-rev-gain"></p>
+        <button id="lu-next" class="btn primary big in-game" type="button">Weiter</button>
+        <p id="lu-next-status" class="muted small center in-game" hidden></p>
+      </div>
+
+      <div class="card" id="lu-history-card" hidden>
+        <h2>Runden</h2>
+        <div class="table-wrap"><table class="lu-table" id="lu-history"></table></div>
+      </div>
+
+      <details class="card lu-rules">
+        <summary>Regeln</summary>
+        <ul class="small muted">
+          <li>Jeder hat die Karten 1–9, jede Karte kann nur einmal gelegt werden. Es gibt 9 Runden, die Rollen wechseln jede Runde.</li>
+          <li>Wer zuerst legt, macht eine Aussage über seine verdeckte Karte, die auf 3 Zahlen einschränkt, und legt fest, ob sie wahr oder gelogen ist.</li>
+          <li>Der andere glaubt ihr oder nicht. Glaubt er nicht, kann er einen Lügnerjoker einsetzen. Danach legt er seine Karte.</li>
+          <li>Differenz ≥ 2: Die höhere Karte gewinnt ihren Wert. Differenz 1: Die niedrigere Karte gewinnt die Summe beider Karten. Gleich: keine Punkte.</li>
+          <li>Lügnerjoker richtig: +2 Punkte, der Lügner verliert seine Punkte dieser Runde. Lügnerjoker falsch: trotzdem +1 Punkt, der andere behält seine Punkte.</li>
+          <li>Eine nicht aufgedeckte Lüge bringt +2 Punkte – aber nur, solange der Gegner noch Lügnerjoker hat.</li>
+          <li>Falle: Spielt der Gegner die Fallenkarte in der gewählten Spanne, gibt es 3 (3 Runden), 6 (2 Runden) oder 9 Punkte (1 Runde).</li>
+        </ul>
+      </details>
+
+      <button id="lu-end" class="btn ghost in-game" type="button" hidden>Spiel beenden (Host)</button>
+      <button class="btn ghost lu-leave" type="button">Lobby verlassen</button>
+    </section>
+
     <!-- ============ ONLINE: BEITRETEN / ERSTELLEN ============ -->
     <section id="screen-online" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
@@ -598,5 +734,6 @@
   <script src="wbi.js"></script>
   <script src="online.js"></script>
   <script src="wbi-online.js"></script>
+  <script src="luegen-online.js"></script>
 </body>
 </html>

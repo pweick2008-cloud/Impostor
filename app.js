@@ -76,7 +76,8 @@ let currentMode = "local"; // "local" (Pass & Play) oder "online"
 
 const GAMES = {
   verraeter: { icon: "🕵️", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
-  werbinich: { icon: "🙋", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." }
+  werbinich: { icon: "🙋", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." },
+  luegen: { icon: "🃏", name: "Lügenduell", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit.", onlineOnly: true }
 };
 
 // Phasen-Anzeige je Spiel und Modus
@@ -84,7 +85,9 @@ const STEP_PLANS = {
   "verraeter-local": [["setup", "Start"], ["reveal", "Rollen"], ["game", "Spiel"]],
   "verraeter-online": [["setup", "Lobby"], ["reveal", "Rollen"], ["game", "Spiel"]],
   "werbinich-local": [["setup", "Start"], ["assign", "Personen"], ["show", "Zeigen"], ["game", "Spiel"]],
-  "werbinich-online": [["setup", "Lobby"], ["assign", "Personen"], ["game", "Spiel"]]
+  "werbinich-online": [["setup", "Lobby"], ["assign", "Personen"], ["game", "Spiel"]],
+  "luegen-local": [["setup", "Lobby"], ["trap", "Fallen"], ["game", "Duell"]],
+  "luegen-online": [["setup", "Lobby"], ["trap", "Fallen"], ["game", "Duell"]]
 };
 
 function updateSteps(phase) {
@@ -117,6 +120,8 @@ function openGameMenu(gameId) {
   $("menu-title").textContent = g.name;
   $("menu-sub").textContent = g.sub;
   $("menu-online-note").hidden = true;
+  $("menu-local").hidden = !!g.onlineOnly;
+  $("menu-only-online").hidden = !g.onlineOnly;
   showScreen("menu");
 }
 
