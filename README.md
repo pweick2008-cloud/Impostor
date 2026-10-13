@@ -3,6 +3,8 @@
 Einfach `index.html` im Browser öffnen (Handy, Tablet oder PC) – keine Installation nötig.
 
 ## Ablauf
+Das Spiel läuft in vier Phasen (oben als Fortschrittsanzeige sichtbar). Zwischen den Phasen erscheint jeweils ein animierter Übergangsbildschirm.
+
 1. **Einstellungen:** Spieleranzahl (3–20) und Namen, Anzahl der Imposter, Kategorie und Schwierigkeit wählen.
 2. **Rollen verteilen:** Ein zufälliger Spielername wird angezeigt. Dieser Spieler nimmt das Gerät, tippt auf seinen Namen und sieht seine Rolle (Begriff oder „IMPOSTER“). Erneut tippen → nächster Spieler.
 3. **Diskussion:**

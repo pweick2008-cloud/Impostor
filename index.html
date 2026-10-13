@@ -10,6 +10,28 @@
 <body>
   <main id="app">
 
+    <!-- Phasen-Anzeige -->
+    <nav id="steps" class="steps" aria-label="Spielphasen">
+      <div class="step" data-phase="setup"><span class="dot">1</span><span class="label">Start</span></div>
+      <div class="step-line"></div>
+      <div class="step" data-phase="reveal"><span class="dot">2</span><span class="label">Rollen</span></div>
+      <div class="step-line"></div>
+      <div class="step" data-phase="game"><span class="dot">3</span><span class="label">Abstimmung</span></div>
+      <div class="step-line"></div>
+      <div class="step" data-phase="end"><span class="dot">4</span><span class="label">Ergebnis</span></div>
+    </nav>
+
+    <!-- ============ ÜBERGANG ZWISCHEN DEN PHASEN ============ -->
+    <section id="screen-phase" class="screen">
+      <button id="phase-card" class="phase-card" type="button">
+        <span class="phase-num" id="phase-num"></span>
+        <span class="phase-icon" id="phase-icon"></span>
+        <span class="phase-title" id="phase-title"></span>
+        <span class="phase-text" id="phase-text"></span>
+        <span class="btn primary big phase-btn" id="phase-btn"></span>
+      </button>
+    </section>
+
     <!-- ============ SETUP ============ -->
     <section id="screen-setup" class="screen active">
       <header class="title">
@@ -64,6 +86,7 @@
     <!-- ============ ROLLEN VERTEILEN ============ -->
     <section id="screen-reveal" class="screen">
       <p class="progress" id="reveal-progress"></p>
+      <div class="reveal-stage">
       <button id="reveal-card" class="reveal-card" type="button">
         <div id="reveal-front" class="reveal-face">
           <span class="hand">📱</span>
@@ -73,6 +96,7 @@
         </div>
         <div id="reveal-back" class="reveal-face" hidden></div>
       </button>
+      </div>
       <p class="muted center small">Niemand sonst darf auf den Bildschirm schauen!</p>
     </section>
 

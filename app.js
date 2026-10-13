@@ -131,10 +131,71 @@ function clampImpostors() {
   settings.impostors = Math.min(Math.max(1, settings.impostors), max);
 }
 
-function showScreen(name) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
-  $("screen-" + name).classList.add("active");
-  window.scrollTo(0, 0);
+/* ---------- Bildschirm-Übergänge ---------- */
+const PHASE_ORDER = ["setup", "reveal", "game", "end"];
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+let transitioning = Promise.resolve();
+
+function updateSteps(phase) {
+  const idx = PHASE_ORDER.indexOf(phase);
+  document.querySelectorAll(".step").forEach((el) => {
+    const i = PHASE_ORDER.indexOf(el.dataset.phase);
+    el.classList.toggle("done", i < idx);
+    el.classList.toggle("current", i === idx);
+  });
+  document.querySelectorAll(".step-line").forEach((el, i) => el.classList.toggle("done", i < idx));
+}
+
+// Blendet den aktuellen Bildschirm aus und den neuen animiert ein.
+// "phase" bestimmt, welcher Schritt oben in der Phasen-Anzeige leuchtet.
+function showScreen(name, phase = name) {
+  transitioning = transitioning.then(async () => {
+    const current = document.querySelector(".screen.active");
+    const next = $("screen-" + name);
+    if (current && current !== next) {
+      current.classList.remove("active");
+      current.classList.add("leaving");
+      await wait(280);
+      current.classList.remove("leaving");
+    }
+    updateSteps(phase);
+    next.classList.remove("active");
+    void next.offsetWidth; // Animation neu starten
+    next.classList.add("active");
+    window.scrollTo(0, 0);
+  });
+  return transitioning;
+}
+
+// Zwischenbildschirm zwischen zwei Phasen. Wird durch Antippen beendet.
+function showPhase({ num, icon, title, text, button, phase, suspense = false }) {
+  $("phase-num").textContent = num ? `Phase ${num}` : "";
+  $("phase-icon").textContent = icon;
+  $("phase-title").textContent = title;
+  $("phase-text").textContent = text;
+  $("phase-btn").textContent = button;
+  const card = $("phase-card");
+  card.classList.toggle("suspense", suspense);
+  return showScreen("phase", phase).then(() => new Promise((resolve) => {
+    const readyAt = Date.now() + 700; // erst nach dem Einblenden antippbar
+    card.onclick = () => {
+      if (Date.now() < readyAt) return;
+      card.onclick = null;
+      resolve();
+    };
+  }));
+}
+
+// Spielt eine Karten-Animation ab und tauscht in der Mitte den Inhalt.
+async function animateCard(kind, swap) {
+  const card = $("reveal-card");
+  card.classList.add(kind + "-out");
+  await wait(kind === "flip" ? 220 : 280);
+  swap();
+  card.classList.remove(kind + "-out");
+  card.classList.add(kind + "-in");
+  await wait(kind === "flip" ? 250 : 350);
+  card.classList.remove(kind + "-in");
 }
 
 /* ---------- Dialog ---------- */
@@ -283,13 +344,22 @@ function startGame() {
     order: shuffle(players), // zufällige Reihenfolge beim Aufdecken
     revealIndex: 0,
     revealed: false,
-    lockUntil: 0,
+    animating: false,
     log: [],
     over: false
   };
 
-  showScreen("reveal");
-  renderReveal();
+  showPhase({
+    num: 2,
+    icon: "🎭",
+    title: "Rollen verteilen",
+    text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${settings.impostors} Imposter.`,
+    button: "Los geht's",
+    phase: "reveal"
+  }).then(() => {
+    renderReveal();
+    showScreen("reveal");
+  });
 }
 
 /* =========================================================
@@ -334,34 +404,48 @@ function renderReveal() {
   back.hidden = false;
 }
 
-function onRevealTap() {
-  // Kurze Sperre, damit ein Doppeltipp nicht versehentlich weiterschaltet
-  const now = Date.now();
-  if (now < game.lockUntil) return;
-  game.lockUntil = now + 450;
+async function onRevealTap() {
+  // Sperre während der Animation, damit ein Doppeltipp nicht versehentlich weiterschaltet
+  if (!game || game.animating) return;
+  game.animating = true;
 
   if (!game.revealed) {
-    game.revealed = true;
+    // Karte umdrehen → Rolle sehen
+    await animateCard("flip", () => { game.revealed = true; renderReveal(); });
+  } else if (game.revealIndex < game.order.length - 1) {
+    // Karte wegwischen → nächster Spieler
+    await animateCard("slide", () => {
+      game.revealed = false;
+      game.revealIndex++;
+      renderReveal();
+    });
   } else {
-    game.revealed = false;
-    game.revealIndex++;
-    if (game.revealIndex >= game.order.length) {
-      startDiscussion();
-      return;
-    }
+    // Letzter Spieler fertig → nächste Phase
+    await animateCard("flip", () => { game.revealed = false; $("reveal-back").innerHTML = ""; renderReveal(); });
+    game.animating = false;
+    startDiscussion();
+    return;
   }
-  renderReveal();
+  game.animating = false;
 }
 
 /* =========================================================
    Diskussion / Abstimmung
    ========================================================= */
-function startDiscussion() {
+async function startDiscussion() {
   $("reveal-back").innerHTML = ""; // Rolle nicht im DOM stehen lassen
   const starter = pick(game.players);
   $("game-starter").textContent = `${starter.name} beginnt mit dem ersten Hinweis.`;
-  showScreen("game");
   renderGame();
+  await showPhase({
+    num: 3,
+    icon: "🗳️",
+    title: "Diskussion & Abstimmung",
+    text: `Alle Rollen sind verteilt!\nReihum gibt jeder einen Hinweis zum Begriff – ohne ihn zu verraten.\n\n${starter.name} beginnt.`,
+    button: "Zur Abstimmung",
+    phase: "game"
+  });
+  showScreen("game");
 }
 
 const activePlayers = () => game.players.filter((p) => !p.out);
@@ -512,8 +596,17 @@ async function onGuess(e) {
 /* =========================================================
    Spielende
    ========================================================= */
-function endGame(winner, reason) {
+async function endGame(winner, reason) {
   game.over = true;
+  await showPhase({
+    num: 4,
+    icon: "🔍",
+    title: "Auflösung",
+    text: "Das Spiel ist vorbei …\nWer hat gewonnen?",
+    button: "Ergebnis anzeigen",
+    phase: "end",
+    suspense: true
+  });
   const banner = $("end-banner");
   banner.classList.remove("crew", "impostor");
   banner.classList.add(winner);
@@ -554,6 +647,7 @@ async function abortGame() {
    ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
+  updateSteps("setup");
   renderSetup();
 
   document.querySelectorAll(".stepper").forEach((s) => s.addEventListener("click", onStep));
