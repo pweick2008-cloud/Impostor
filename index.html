@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14111f">
+  <title>Imposter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- ============ SETUP ============ -->
+    <section id="screen-setup" class="screen active">
+      <header class="title">
+        <h1>🕵️ Imposter</h1>
+        <p class="sub">Ein Gerät · Alle Spieler · Ein Geheimnis</p>
+      </header>
+
+      <div class="card">
+        <div class="row-between">
+          <h2>Spieler</h2>
+          <div class="stepper">
+            <button type="button" data-step="players" data-dir="-1" aria-label="Spieler entfernen">−</button>
+            <span id="player-count">4</span>
+            <button type="button" data-step="players" data-dir="1" aria-label="Spieler hinzufügen">+</button>
+          </div>
+        </div>
+        <div id="player-list" class="player-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h2>Imposter</h2>
+          <div class="stepper">
+            <button type="button" data-step="impostors" data-dir="-1" aria-label="Weniger Imposter">−</button>
+            <span id="impostor-count">1</span>
+            <button type="button" data-step="impostors" data-dir="1" aria-label="Mehr Imposter">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Kategorie</h2>
+        <div id="category-list" class="chips"></div>
+      </div>
+
+      <div class="card">
+        <h2>Schwierigkeit</h2>
+        <div id="difficulty-list" class="chips"></div>
+      </div>
+
+      <div class="card">
+        <label class="toggle">
+          <input type="checkbox" id="opt-hint" checked>
+          <span>Imposter sieht die Kategorie</span>
+        </label>
+      </div>
+
+      <p id="setup-error" class="error" hidden></p>
+      <button id="btn-start" class="btn primary big">Spiel starten</button>
+    </section>
+
+    <!-- ============ ROLLEN VERTEILEN ============ -->
+    <section id="screen-reveal" class="screen">
+      <p class="progress" id="reveal-progress"></p>
+      <button id="reveal-card" class="reveal-card" type="button">
+        <div id="reveal-front" class="reveal-face">
+          <span class="hand">📱</span>
+          <span class="small">Gib das Gerät an</span>
+          <span id="reveal-name" class="big-name"></span>
+          <span class="small muted">Tippe auf deinen Namen, um deine Rolle zu sehen</span>
+        </div>
+        <div id="reveal-back" class="reveal-face" hidden></div>
+      </button>
+      <p class="muted center small">Niemand sonst darf auf den Bildschirm schauen!</p>
+    </section>
+
+    <!-- ============ SPIEL / ABSTIMMUNG ============ -->
+    <section id="screen-game" class="screen">
+      <header class="title">
+        <h1>🗳️ Diskussion</h1>
+        <p class="sub" id="game-starter"></p>
+      </header>
+
+      <div class="card">
+        <div class="row-between">
+          <h2>Spieler</h2>
+          <span class="pill" id="game-status"></span>
+        </div>
+        <div id="game-players" class="chips static"></div>
+      </div>
+
+      <form id="form-vote" class="card" autocomplete="off">
+        <h2>Verdächtigen rauswählen</h2>
+        <p class="muted small">Name des vermuteten Imposters eingeben.</p>
+        <input id="vote-name" list="active-players" placeholder="Spielername" autocomplete="off" autocapitalize="words">
+        <button class="btn danger" type="submit">Rauswählen</button>
+      </form>
+
+      <form id="form-guess" class="card" autocomplete="off">
+        <h2>Imposter rät den Begriff</h2>
+        <p class="muted small">Nur für Imposter. Richtig = gewonnen, falsch = verloren. Danach ist man so oder so raus – die anderen erfahren den Begriff nicht.</p>
+        <input id="guess-name" list="active-players" placeholder="Dein Spielername" autocomplete="off" autocapitalize="words">
+        <div class="secret-input">
+          <input id="guess-word" type="password" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="button" id="toggle-secret" class="eye" aria-label="Eingabe anzeigen">👁️</button>
+        </div>
+        <button class="btn primary" type="submit">Begriff raten</button>
+      </form>
+
+      <datalist id="active-players"></datalist>
+
+      <div class="card" id="log-card" hidden>
+        <h2>Verlauf</h2>
+        <ul id="game-log" class="log"></ul>
+      </div>
+
+      <button id="btn-abort" class="btn ghost">Spiel abbrechen</button>
+    </section>
+
+    <!-- ============ ENDE ============ -->
+    <section id="screen-end" class="screen">
+      <div class="end-banner" id="end-banner">
+        <span id="end-emoji" class="end-emoji"></span>
+        <h1 id="end-title"></h1>
+        <p id="end-reason"></p>
+      </div>
+
+      <div class="card">
+        <h2>Der Begriff war</h2>
+        <p class="word-reveal" id="end-word"></p>
+        <p class="muted center small" id="end-category"></p>
+      </div>
+
+      <div class="card">
+        <h2>Imposter</h2>
+        <ul id="end-impostors" class="log"></ul>
+      </div>
+
+      <button id="btn-again" class="btn primary big">Neue Runde (gleiche Spieler)</button>
+      <button id="btn-setup" class="btn ghost">Zurück zu den Einstellungen</button>
+    </section>
+  </main>
+
+  <!-- Hinweis-Dialog -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box">
+      <div id="modal-emoji" class="modal-emoji"></div>
+      <h2 id="modal-title"></h2>
+      <p id="modal-text"></p>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn ghost" hidden>Abbrechen</button>
+        <button id="modal-ok" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="words.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
