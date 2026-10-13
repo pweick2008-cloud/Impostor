@@ -1,0 +1,16 @@
+{
+  "name": "imposter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Imposter-Partyspiel: Pass & Play auf einem Gerät oder online in einer gemeinsamen Lobby",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "8.18.0"
+  }
+}

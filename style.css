@@ -348,3 +348,79 @@ select {
   width: 100%; font-size: 1rem; padding: 12px 14px; border-radius: 12px;
   border: 1px solid var(--border); background: var(--bg-2); color: var(--text);
 }
+
+[hidden] { display: none !important; }
+
+/* ===== Hauptmenü ===== */
+.menu-title { margin: 28px 0 10px; }
+.menu-logo { font-size: 4rem; display: block; animation: pop .7s cubic-bezier(.2,.8,.2,1) both; }
+.menu-title h1 { font-size: 2.6rem; }
+.mode-card {
+  appearance: none; font: inherit; color: var(--text); text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px; border-radius: 20px;
+  border: 2px solid var(--border); background: var(--card);
+  transition: border-color .2s, transform .1s;
+  animation: rise .5s cubic-bezier(.2,.8,.2,1) both;
+}
+.mode-card + .mode-card { animation-delay: .08s; }
+.mode-card:hover, .mode-card:focus-visible { border-color: var(--primary-2); outline: none; }
+.mode-card:active { transform: scale(.98); }
+.mode-card.disabled > * { opacity: .5; }
+.mode-icon { font-size: 2.4rem; flex-shrink: 0; }
+.mode-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mode-title { font-size: 1.25rem; font-weight: 800; }
+.mode-desc { color: var(--muted); font-size: .95rem; }
+
+.back-link {
+  align-self: flex-start; appearance: none; border: 0; background: none;
+  color: var(--muted); font: inherit; cursor: pointer; padding: 4px 0;
+}
+.back-link:hover { color: var(--text); }
+
+/* ===== Online: Beitreten & Lobby ===== */
+.code-input { text-transform: uppercase; letter-spacing: .3em; font-weight: 700; text-align: center; font-size: 1.3rem !important; }
+.code-card { align-items: center; text-align: center; }
+.lobby-code {
+  font-size: 3rem; font-weight: 900; letter-spacing: .25em; padding-left: .25em;
+  font-variant-numeric: tabular-nums; color: var(--primary-2);
+}
+.lobby-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lobby-player {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
+  animation: rise .35s ease both;
+}
+.lobby-player.offline { opacity: .55; }
+.badge.host { background: #3b2f12; color: #fde68a; }
+.kick {
+  appearance: none; border: 0; background: none; color: var(--muted);
+  font-size: 1rem; cursor: pointer; padding: 4px 6px; border-radius: 8px;
+}
+.kick:hover { color: #fca5a5; background: var(--card); }
+.stepper.disabled button { opacity: .35; pointer-events: none; }
+.toggle input:disabled + span { color: var(--muted); }
+.btn:disabled { opacity: .5; cursor: default; transform: none; }
+
+/* ===== Online: Spielrunde ===== */
+.myrole {
+  appearance: none; font: inherit; color: var(--text); cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 14px;
+  border: 1px dashed var(--border); background: var(--bg-2); text-align: left;
+}
+.myrole.shown { border-style: solid; border-color: var(--success); background: linear-gradient(160deg, #15302a, var(--bg-2)); }
+.myrole.shown.impostor { border-color: var(--impostor); background: linear-gradient(160deg, #3b1218, var(--bg-2)); }
+.turn-card.mine { border-color: var(--success); box-shadow: 0 0 0 4px rgba(34, 197, 94, .18); animation: rise .35s ease both; }
+.host-row { display: flex; gap: 8px; }
+.host-row .btn { flex: 1; }
+.profile.me { border-style: dashed; }
+.dot-offline { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
+
+.conn-banner {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  background: #7c2d12; color: #fed7aa; border-radius: 999px;
+  padding: 10px 18px; font-size: .9rem; box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  animation: rise .3s ease both;
+}

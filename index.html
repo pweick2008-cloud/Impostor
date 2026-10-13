@@ -31,9 +31,35 @@
     </section>
 
     <!-- ============ SETUP ============ -->
-    <section id="screen-setup" class="screen active">
+    <!-- ============ HAUPTMENÜ ============ -->
+    <section id="screen-menu" class="screen active">
+      <header class="title menu-title">
+        <span class="menu-logo">🕵️</span>
+        <h1>Imposter</h1>
+        <p class="sub">Einer kennt den Begriff nicht. Findet ihn!</p>
+      </header>
+      <button id="menu-local" class="mode-card" type="button">
+        <span class="mode-icon">📱</span>
+        <span class="mode-text">
+          <span class="mode-title">Pass &amp; Play</span>
+          <span class="mode-desc">Ein Gerät für alle – wird reihum weitergegeben.</span>
+        </span>
+      </button>
+      <button id="menu-online" class="mode-card" type="button">
+        <span class="mode-icon">🌐</span>
+        <span class="mode-text">
+          <span class="mode-title">Online</span>
+          <span class="mode-desc">Jeder spielt auf seinem eigenen Gerät in einer gemeinsamen Lobby.</span>
+        </span>
+      </button>
+      <p id="menu-online-note" class="muted small center" hidden></p>
+    </section>
+
+    <!-- ============ SETUP (PASS & PLAY) ============ -->
+    <section id="screen-setup" class="screen">
+      <button class="back-link" type="button" data-back="menu">← Menü</button>
       <header class="title">
-        <h1>🕵️ Imposter</h1>
+        <h1>📱 Pass &amp; Play</h1>
         <p class="sub">Ein Gerät · Alle Spieler · Ein Geheimnis</p>
       </header>
 
@@ -157,7 +183,185 @@
 
       <button id="btn-abort" class="btn ghost in-game" type="button">Spiel abbrechen</button>
     </section>
+
+    <!-- ============ ONLINE: BEITRETEN / ERSTELLEN ============ -->
+    <section id="screen-online" class="screen">
+      <button class="back-link" type="button" data-back="menu">← Menü</button>
+      <header class="title">
+        <h1>🌐 Online spielen</h1>
+        <p class="sub">Jeder auf seinem eigenen Gerät</p>
+      </header>
+
+      <div class="card">
+        <h2>Dein Name</h2>
+        <input id="on-name" type="text" maxlength="24" placeholder="Wie heißt du?" autocomplete="off" autocapitalize="words">
+      </div>
+
+      <div class="card">
+        <h2>Neue Lobby</h2>
+        <p class="muted small">Du bist der Host und stellst das Spiel ein. Die anderen treten mit dem Code bei.</p>
+        <button id="on-create" class="btn primary" type="button">Lobby erstellen</button>
+      </div>
+
+      <form id="on-join-form" class="card" autocomplete="off">
+        <h2>Lobby beitreten</h2>
+        <input id="on-code" type="text" maxlength="4" placeholder="Code, z. B. KXPT" autocomplete="off" autocapitalize="characters" spellcheck="false" class="code-input">
+        <button class="btn" type="submit">Beitreten</button>
+      </form>
+
+      <p id="on-error" class="error" hidden></p>
+    </section>
+
+    <!-- ============ ONLINE: LOBBY ============ -->
+    <section id="screen-lobby" class="screen">
+      <header class="title">
+        <h1>Lobby</h1>
+        <p class="sub">Code zum Beitreten</p>
+      </header>
+
+      <div class="card code-card">
+        <span class="lobby-code" id="lobby-code"></span>
+        <button id="lobby-share" class="btn" type="button">Einladungslink teilen</button>
+        <span class="muted small" id="lobby-share-note" hidden></span>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h2>Spieler</h2>
+          <span class="pill" id="lobby-count"></span>
+        </div>
+        <ul id="lobby-players" class="lobby-players"></ul>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h2>Einstellungen</h2>
+          <span class="pill" id="lobby-host-pill"></span>
+        </div>
+        <div class="row-between">
+          <span>Imposter</span>
+          <div class="stepper" id="lobby-imp-stepper">
+            <button type="button" data-dir="-1" aria-label="Weniger Imposter">−</button>
+            <span id="lobby-impostors">1</span>
+            <button type="button" data-dir="1" aria-label="Mehr Imposter">+</button>
+          </div>
+        </div>
+        <span class="muted small">Kategorie</span>
+        <div id="lobby-categories" class="chips"></div>
+        <span class="muted small">Schwierigkeit</span>
+        <div id="lobby-difficulties" class="chips"></div>
+        <label class="toggle">
+          <input type="checkbox" id="lobby-hint">
+          <span>Imposter sieht die Kategorie</span>
+        </label>
+      </div>
+
+      <button id="lobby-start" class="btn primary big" type="button">Spiel starten</button>
+      <p id="lobby-wait" class="muted center" hidden>Warte, bis der Host das Spiel startet …</p>
+      <button id="lobby-leave" class="btn ghost" type="button">Lobby verlassen</button>
+    </section>
+
+    <!-- ============ ONLINE: EIGENE ROLLE ============ -->
+    <section id="screen-o-reveal" class="screen">
+      <p class="progress" id="o-reveal-progress"></p>
+      <div class="reveal-stage">
+        <button id="o-reveal-card" class="reveal-card" type="button">
+          <div id="o-reveal-front" class="reveal-face">
+            <span class="hand">🔒</span>
+            <span class="big-name" id="o-reveal-name"></span>
+            <span class="small muted">Tippe hier, um deine Rolle zu sehen.<br>Achte darauf, dass niemand mitschaut!</span>
+          </div>
+          <div id="o-reveal-back" class="reveal-face" hidden></div>
+        </button>
+      </div>
+      <button id="o-ready" class="btn primary big" type="button">Bereit</button>
+      <button id="o-force" class="btn ghost" type="button" hidden>Nicht warten – Spiel starten (Host)</button>
+    </section>
+
+    <!-- ============ ONLINE: SPIEL ============ -->
+    <section id="screen-o-game" class="screen">
+      <header class="title">
+        <h1>🗣️ Spielrunde</h1>
+        <p class="sub" id="o-sub"></p>
+      </header>
+
+      <div id="o-result" class="end-banner" hidden>
+        <span id="o-end-emoji" class="end-emoji"></span>
+        <h1 id="o-end-title"></h1>
+        <p id="o-end-reason"></p>
+        <div class="result-word">
+          <span class="role-label">Der Begriff war</span>
+          <span class="word-reveal" id="o-end-word"></span>
+          <span class="muted small" id="o-end-category"></span>
+        </div>
+        <div class="result-actions">
+          <button id="o-again" class="btn primary big" type="button">Neue Runde</button>
+          <button id="o-to-lobby" class="btn ghost" type="button">Zurück zur Lobby</button>
+          <p id="o-wait-host" class="muted small center" hidden>Warte auf den Host für die nächste Runde …</p>
+        </div>
+      </div>
+
+      <!-- Eigene Rolle (zum Antippen) -->
+      <button id="o-myrole" class="myrole in-game" type="button"></button>
+
+      <form id="o-tip-form" class="card turn-card in-game" autocomplete="off">
+        <span class="role-label" id="o-turn-label">Am Zug</span>
+        <span class="turn-name" id="o-turn-name"></span>
+        <input id="o-tip-input" type="text" placeholder="Dein Tipp zum Begriff" maxlength="40" autocomplete="off" spellcheck="false">
+        <button id="o-tip-btn" class="btn primary" type="submit">Tipp abgeben</button>
+        <button id="o-skip" class="btn ghost" type="button" hidden>Spieler überspringen (Host)</button>
+      </form>
+
+      <div id="o-vote-card" class="card vote-card in-game" hidden>
+        <div class="row-between">
+          <h2>Abstimmung</h2>
+          <span class="pill" id="o-vote-status"></span>
+        </div>
+        <p class="muted small" id="o-vote-hint"></p>
+        <button id="o-vote-btn" class="btn danger" type="button">Vote starten</button>
+        <div id="o-vote-options" class="vote-options" hidden></div>
+        <div id="o-vote-host" class="host-row" hidden>
+          <button id="o-vote-finish" class="btn ghost" type="button">Jetzt auswerten</button>
+          <button id="o-vote-cancel" class="btn ghost" type="button">Abbrechen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <h2>Spieler</h2>
+          <span class="pill" id="o-status"></span>
+        </div>
+        <div id="o-profiles" class="profiles"></div>
+      </div>
+
+      <button id="o-guess" class="btn imp in-game" type="button" hidden>🕵️ Begriff raten</button>
+
+      <div class="card" id="o-log-card" hidden>
+        <h2>Verlauf</h2>
+        <ul id="o-log" class="log"></ul>
+      </div>
+
+      <button id="o-end" class="btn ghost in-game" type="button" hidden>Spiel beenden (Host)</button>
+      <button id="o-leave" class="btn ghost" type="button">Lobby verlassen</button>
+    </section>
   </main>
+
+  <!-- Verbindungsstatus (online) -->
+  <div id="conn-banner" class="conn-banner" hidden>Verbindung unterbrochen – verbinde neu …</div>
+
+  <!-- Online: Imposter rät den Begriff -->
+  <div id="o-guess-panel" class="overlay" hidden>
+    <form id="o-guess-form" class="overlay-box" autocomplete="off">
+      <span class="hand">🕵️</span>
+      <h2>Begriff raten</h2>
+      <p class="muted small">Richtig = gewonnen, falsch = verloren. Danach bist du so oder so raus. Die anderen erfahren den Begriff nicht.</p>
+      <input id="o-guess-word" type="text" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="modal-actions">
+        <button id="o-guess-cancel" class="btn ghost" type="button">Abbrechen</button>
+        <button class="btn primary" type="submit">Raten</button>
+      </div>
+    </form>
+  </div>
 
   <!-- Abstimmung: Gerät wird reihum weitergegeben, jede Stimme ist geheim -->
   <div id="vote-panel" class="overlay" hidden>
@@ -220,6 +424,8 @@
   </div>
 
   <script src="words.js"></script>
+  <script src="shared.js"></script>
   <script src="app.js"></script>
+  <script src="online.js"></script>
 </body>
 </html>

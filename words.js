@@ -136,3 +136,5 @@ const CATEGORIES = {
     }
   }
 };
+
+if (typeof module !== "undefined") module.exports = { CATEGORIES };

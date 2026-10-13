@@ -1,0 +1,9 @@
+# Blueprint für Render.com: startet den Imposter-Server als kostenlosen Web Service.
+services:
+  - type: web
+    name: imposter
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
