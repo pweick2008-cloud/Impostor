@@ -49,7 +49,7 @@
         <span class="mode-icon">🃏</span>
         <span class="mode-text">
           <span class="mode-title">Lügenduell</span>
-          <span class="mode-desc">Karten 1–9, Aussagen, Lügen und Fallen. Durchschau deinen Gegner in 9 Runden.</span>
+          <span class="mode-desc">Karten 1–9, Lügen und Fallen. Durchschau deinen Gegner in 8 Runden.</span>
           <span class="mode-tag">Nur online · genau 2 Spieler</span>
         </span>
       </button>
@@ -408,16 +408,15 @@
 
       <div id="lu-board" class="lu-board"></div>
 
-      <!-- Angreifer: Karte, Aussage, 3 Zahlen, Wahrheit/Lüge -->
+      <!-- Angreifer: Karte, 3 Zahlen, Wahrheit/Lüge -->
       <form id="lu-attack" class="card lu-action in-game" autocomplete="off" hidden>
         <span class="role-label">Du legst zuerst</span>
         <h2>1. Welche Karte legst du verdeckt?</h2>
         <div id="lu-att-cards" class="num-row"></div>
-        <h2>2. Deine Aussage zur Karte</h2>
-        <input id="lu-att-text" type="text" maxlength="80" placeholder="z. B. „Es ist eine Primzahl“" autocomplete="off">
-        <h2>3. Auf welche 3 Zahlen trifft die Aussage zu?</h2>
+        <h2>2. Welche 3 Zahlen nennst du?</h2>
+        <p class="small muted lu-explain">Dein Gegner sieht: „Meine Karte ist eine dieser Zahlen.“</p>
         <div id="lu-att-nums" class="num-row"></div>
-        <h2>4. Ist deine Aussage wahr?</h2>
+        <h2>3. Sagst du die Wahrheit?</h2>
         <div id="lu-att-claim" class="answer-buttons">
           <button type="button" class="btn" data-claim="truth">✅ Wahrheit</button>
           <button type="button" class="btn" data-claim="lie">🤥 Lüge</button>
@@ -472,8 +471,8 @@
       <details class="card lu-rules">
         <summary>Regeln</summary>
         <ul class="small muted">
-          <li>Jeder hat die Karten 1–9, jede Karte kann nur einmal gelegt werden. Es gibt 9 Runden, die Rollen wechseln jede Runde.</li>
-          <li>Wer zuerst legt, macht eine Aussage über seine verdeckte Karte, die auf 3 Zahlen einschränkt, und legt fest, ob sie wahr oder gelogen ist.</li>
+          <li>Jeder hat die Karten 1–9 und 2 Lügnerjoker, jede Karte kann nur einmal gelegt werden. Es gibt 8 Runden, die Rollen wechseln jede Runde.</li>
+          <li>Wer zuerst legt, wählt verdeckt eine Karte und nennt 3 Zahlen („meine Karte ist eine davon“). Er legt fest, ob das stimmt oder gelogen ist.</li>
           <li>Der andere glaubt ihr oder nicht. Glaubt er nicht, kann er einen Lügnerjoker einsetzen. Danach legt er seine Karte.</li>
           <li>Differenz ≥ 2: Die höhere Karte gewinnt ihren Wert. Differenz 1: Die niedrigere Karte gewinnt die Summe beider Karten. Gleich: keine Punkte.</li>
           <li>Lügnerjoker richtig: +2 Punkte, der Lügner verliert seine Punkte dieser Runde. Lügnerjoker falsch: trotzdem +1 Punkt, der andere behält seine Punkte.</li>

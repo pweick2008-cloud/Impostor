@@ -893,16 +893,15 @@ Object.assign(handlers, {
 
 /* =========================================================
    Lügenduell – nur online, genau 2 Spieler
-   - Jeder hat die Karten 1–9, einen Fallenjoker und Lügnerjoker
-     (wer beginnt: 2, der andere: 3).
+   - Jeder hat die Karten 1–9, einen Fallenjoker und 2 Lügnerjoker.
    - Vor Spielbeginn stellt jeder eine Falle: eine Karte des Gegners und
      eine Rundenspanne von höchstens 3 Runden.
-   - 9 Runden, die Rollen wechseln jede Runde. Der Angreifer legt verdeckt
-     eine Karte, macht dazu eine Aussage, die auf 3 Zahlen einschränkt, und
+   - 8 Runden, die Rollen wechseln jede Runde. Der Angreifer legt verdeckt
+     eine Karte, nennt 3 Zahlen („meine Karte ist eine davon“) und
      legt fest, ob sie wahr oder gelogen ist. Der Verteidiger glaubt ihr
      oder nicht (optional mit Lügnerjoker) und legt dann seine Karte.
    ========================================================= */
-const LU_ROUNDS = 9;
+const LU_ROUNDS = 8;
 const LU_TRAP_POINTS = { 1: 9, 2: 6, 3: 3 }; // Spanne → Punkte
 
 function luStart(lobby) {
@@ -915,7 +914,7 @@ function luStart(lobby) {
     ids: [starter, other], // Runde 1 greift der Startspieler an, danach abwechselnd
     names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
     starter,
-    jokers: { [starter]: 2, [other]: 3 },
+    jokers: { [starter]: 2, [other]: 2 },
     hand: { [starter]: [1, 2, 3, 4, 5, 6, 7, 8, 9], [other]: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
     trap: { [starter]: null, [other]: null },
     trapState: { [starter]: "offen", [other]: "offen" }, // offen | ausgelöst | verpasst
@@ -965,7 +964,6 @@ function luView(lobby, g, me) {
     const iAmAttacker = me.id === attacker;
     const revealed = g.step === "reveal";
     move = {
-      text: m.text,
       nums: m.nums,
       // Karte und Wahrheit/Lüge sieht der Verteidiger erst nach dem Aufdecken
       card: iAmAttacker || revealed ? m.card : null,
@@ -1071,7 +1069,6 @@ function luResolve(lobby) {
   g.history.push({
     round: g.round,
     attacker: att,
-    text: m.text,
     nums: m.nums,
     claim: m.claim,
     card: a,
@@ -1133,10 +1130,8 @@ Object.assign(handlers, {
     if (g.step !== "attack" || luAttacker(g) !== me.id) fail("Du bist gerade nicht dran.");
     const card = luInt(msg.card, 1, 9);
     if (!g.hand[me.id].includes(card)) fail("Diese Karte hast du schon gespielt.");
-    const text = String(msg.text || "").trim().replace(/\s+/g, " ").slice(0, 80);
-    if (!normalize(text)) fail("Bitte schreib eine Aussage zu deiner Karte.");
     const nums = [...new Set((Array.isArray(msg.nums) ? msg.nums : []).map((n) => luInt(n, 1, 9)))].sort((x, y) => x - y);
-    if (nums.length !== 3) fail("Wähle genau 3 Zahlen, auf die deine Aussage zutrifft.");
+    if (nums.length !== 3) fail("Wähle genau 3 Zahlen.");
     const claim = msg.claim === "lie" ? "lie" : msg.claim === "truth" ? "truth" : null;
     if (!claim) fail("Wähle, ob deine Aussage die Wahrheit oder eine Lüge ist.");
     const inSet = nums.includes(card);
@@ -1144,7 +1139,7 @@ Object.assign(handlers, {
     if (claim === "lie" && inSet) fail(`Deine Karte ${card} ist unter ${nums.join(", ")} – das wäre die Wahrheit.`);
 
     g.hand[me.id] = g.hand[me.id].filter((c) => c !== card);
-    g.move = { card, text, nums, claim, defense: null, defCard: null };
+    g.move = { card, nums, claim, defense: null, defCard: null };
     g.step = "defend";
     return lobby;
   },

@@ -51,7 +51,7 @@ const LUOnline = (() => {
     const g = state.game;
     const mine = me();
     const opp = g.players.find((p) => p.id === g.opp);
-    $("lu-setup-sub").textContent = `Gegen ${opp ? opp.name : "?"} · ${mine.starter ? "Du beginnst (2 Lügnerjoker)" : "Dein Gegner beginnt (du hast 3 Lügnerjoker)"}`;
+    $("lu-setup-sub").textContent = `Gegen ${opp ? opp.name : "?"} · ${mine.starter ? "Du beginnst" : "Dein Gegner beginnt"} · ${g.rounds} Runden`;
 
     // Gespeicherte Falle als Ausgangswert übernehmen
     if (mine.trap && trapDraft.card === null) {
@@ -59,7 +59,8 @@ const LUOnline = (() => {
     }
 
     numButtons($("lu-trap-cards"), ALL, { selected: [trapDraft.card], onPick: (v) => { trapDraft.card = v; renderSetup(); } });
-    numButtons($("lu-trap-from"), ALL, { selected: [trapDraft.from], onPick: (v) => { trapDraft.from = v; renderSetup(); } });
+    const rounds = Array.from({ length: g.rounds }, (_, i) => i + 1);
+    numButtons($("lu-trap-from"), rounds, { selected: [trapDraft.from], onPick: (v) => { trapDraft.from = v; renderSetup(); } });
 
     const lens = $("lu-trap-len");
     lens.innerHTML = "";
@@ -70,7 +71,7 @@ const LUOnline = (() => {
     const ready = trapDraft.card !== null && trapDraft.from !== null;
     let preview = "Wähle eine Karte und die erste Runde.";
     if (ready) {
-      const to = Math.min(9, trapDraft.from + trapDraft.len - 1);
+      const to = Math.min(g.rounds, trapDraft.from + trapDraft.len - 1);
       const span = to - trapDraft.from + 1;
       preview = `Spielt ${opp ? opp.name : "dein Gegner"} die ${trapDraft.card} ${span === 1 ? `in Runde ${trapDraft.from}` : `in Runde ${trapDraft.from}–${to}`}, bekommst du ${TRAP_POINTS[span]} Punkte.`;
     }
@@ -95,7 +96,7 @@ const LUOnline = (() => {
 
   function submitTrap() {
     if (trapDraft.card === null || trapDraft.from === null) return;
-    const to = Math.min(9, trapDraft.from + trapDraft.len - 1);
+    const to = Math.min(state.game.rounds, trapDraft.from + trapDraft.len - 1);
     Online.send({ type: "luTrap", card: trapDraft.card, from: trapDraft.from, to });
   }
 
@@ -172,7 +173,6 @@ const LUOnline = (() => {
     if (key !== draftKey) {
       draftKey = key;
       draft = { card: null, nums: [], claim: null, defense: null, defCard: null };
-      $("lu-att-text").value = "";
     }
     const show = { attack: false, defend: false, wait: false, reveal: false };
 
@@ -182,7 +182,7 @@ const LUOnline = (() => {
         renderAttack(mine);
       } else {
         show.wait = true;
-        $("lu-wait-text").textContent = `${name(g.attacker)} legt eine Karte verdeckt und überlegt sich eine Aussage …`;
+        $("lu-wait-text").textContent = `${name(g.attacker)} legt eine Karte verdeckt und wählt 3 Zahlen …`;
       }
     } else if (g.phase === "play" && g.step === "defend") {
       if (!amAttacker) {
@@ -191,7 +191,7 @@ const LUOnline = (() => {
       } else {
         show.wait = true;
         const m = g.move;
-        $("lu-wait-text").innerHTML = `Du hast die <strong>${m.card}</strong> gelegt: „${escapeHtml(m.text)}“ (${m.nums.join(", ")}) – ${m.claim === "lie" ? "🤥 gelogen" : "✅ wahr"}.<br>${escapeHtml(name(g.defender))} entscheidet …`;
+        $("lu-wait-text").innerHTML = `Du hast die <strong>${m.card}</strong> gelegt und ${m.nums.join(", ")} genannt – ${m.claim === "lie" ? "🤥 gelogen" : "✅ wahr"}.<br>${escapeHtml(name(g.defender))} entscheidet …`;
       }
     } else if (g.step === "reveal" || over) {
       const last = g.lastResult || g.history[g.history.length - 1];
@@ -234,7 +234,7 @@ const LUOnline = (() => {
     hint.className = "lu-hint";
     if (draft.card === null) hint.textContent = "Wähle zuerst deine Karte.";
     else if (draft.nums.length !== 3) hint.textContent = `Wähle genau 3 Zahlen (${draft.nums.length}/3).`;
-    else if (!draft.claim) hint.textContent = "Ist deine Aussage wahr oder gelogen?";
+    else if (!draft.claim) hint.textContent = "Sagst du die Wahrheit oder lügst du?";
     else {
       const inSet = draft.nums.includes(draft.card);
       if (draft.claim === "truth" && !inSet) {
@@ -254,20 +254,14 @@ const LUOnline = (() => {
 
   function submitAttack(e) {
     e.preventDefault();
-    const text = $("lu-att-text").value.trim();
-    if (!text) {
-      $("lu-att-text").focus();
-      showToast("Schreib eine Aussage zu deiner Karte.");
-      return;
-    }
-    Online.send({ type: "luAttack", card: draft.card, text, nums: draft.nums, claim: draft.claim });
+    Online.send({ type: "luAttack", card: draft.card, nums: draft.nums, claim: draft.claim });
   }
 
   function renderDefend(mine) {
     const g = state.game;
     const m = g.move;
     $("lu-def-label").textContent = `${name(g.attacker)} sagt über seine verdeckte Karte:`;
-    $("lu-def-text").textContent = `„${m.text}“`;
+    $("lu-def-text").textContent = "„Es ist eine dieser Zahlen.“";
     $("lu-def-nums").innerHTML = m.nums.map((n) => `<span class="mini-card">${n}</span>`).join("");
 
     const choice = $("lu-def-choice");
@@ -311,7 +305,7 @@ const LUOnline = (() => {
     $("lu-rev-att-name").textContent = name(r.attacker);
     $("lu-rev-def-name").textContent = def ? def.name : "";
     const defText = { believe: "hat geglaubt", doubt: "hat nicht geglaubt", joker: "hat den Lügnerjoker gesetzt" }[r.defense];
-    $("lu-rev-statement").innerHTML = `„${escapeHtml(r.text)}“ (${r.nums.join(", ")}) war <strong>${r.claim === "lie" ? "🤥 gelogen" : "✅ wahr"}</strong> – ${escapeHtml(def ? def.name : "")} ${defText}.`;
+    $("lu-rev-statement").innerHTML = `„Eine von ${r.nums.join(", ")}“ war <strong>${r.claim === "lie" ? "🤥 gelogen" : "✅ wahr"}</strong> – ${escapeHtml(def ? def.name : "")} ${defText}.`;
     const lines = $("lu-rev-lines");
     lines.innerHTML = "";
     for (const l of r.lines) {
@@ -333,13 +327,13 @@ const LUOnline = (() => {
     $("lu-history-card").hidden = g.history.length === 0;
     if (!g.history.length) return;
     const [a, b] = [g.you, g.opp];
-    const head = `<tr><th>R</th><th>Aussage</th><th>${escapeHtml(name(a))}</th><th>${escapeHtml(name(b))}</th><th>Punkte</th></tr>`;
+    const head = `<tr><th>R</th><th>Zahlen</th><th>${escapeHtml(name(a))}</th><th>${escapeHtml(name(b))}</th><th>Punkte</th></tr>`;
     const rows = g.history.map((r) => {
       const cardOf = (id) => (r.attacker === id ? r.card : r.defCard);
       const tag = r.defense === "joker" ? " 🃏" : "";
       return `<tr>
         <td>${r.round}</td>
-        <td>${escapeHtml(r.text)} <span class="muted">(${r.nums.join(",")})</span> ${r.claim === "lie" ? "🤥" : "✅"}${tag}</td>
+        <td>${r.nums.join(", ")} ${r.claim === "lie" ? "🤥" : "✅"}${tag}</td>
         <td class="num">${cardOf(a)}</td>
         <td class="num">${cardOf(b)}</td>
         <td class="num">${r.gain[a] || 0} : ${r.gain[b] || 0}</td>
