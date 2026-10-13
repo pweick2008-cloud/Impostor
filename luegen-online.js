@@ -109,31 +109,39 @@ const LUOnline = (() => {
     return `🪤 ${own ? "Deine Falle" : "Falle"}: ${t.card} in ${span} (${t.points} P.)${st}`;
   }
 
-  function renderBoard() {
+  // Kurze Anzeige nach jeder Runde: Punktestand und offene Karten des Gegners
+  let shownRound = null;
+  let overlayTimer = null;
+
+  function showScoreOverlay() {
     const g = state.game;
-    const wrap = $("lu-board");
-    wrap.innerHTML = "";
-    const order = [g.you, g.opp].map((id) => g.players.find((p) => p.id === id)).filter(Boolean);
-    for (const p of order) {
-      const own = p.id === state.you;
-      const el = document.createElement("div");
-      const role = g.phase === "play" ? (p.id === g.attacker ? "legt zuerst" : "verteidigt") : "";
-      el.className = "lu-player" + (own ? " me" : "") + (g.phase === "play" && p.id === g.attacker ? " attacking" : "");
-      el.innerHTML = `
-        <div class="profile-head">
-          <span class="avatar">${escapeHtml(p.name.charAt(0).toUpperCase())}</span>
-          <span class="profile-name">${escapeHtml(p.name)}${own ? " (Du)" : ""}</span>
-          ${p.connected ? "" : `<span class="dot-offline" title="offline"></span>`}
-          ${role ? `<span class="badge">${role}</span>` : ""}
-        </div>
-        <div class="lu-score"><span class="lu-points">${p.score}</span><span class="muted small">Punkte</span></div>
-        <div class="lu-meta">
-          <span>🃏 Lügnerjoker: <strong>${p.jokers}</strong></span>
-          <span>${escapeHtml(trapText(p, own))}</span>
-        </div>
-        <div class="lu-hand">${ALL.map((c) => `<span class="mini-card${p.hand.includes(c) ? "" : " used"}">${c}</span>`).join("")}</div>`;
-      wrap.appendChild(el);
-    }
+    const mine = me();
+    const opp = g.players.find((p) => p.id === g.opp);
+    if (!opp) return;
+    const done = g.round - 1;
+    $("lu-so-title").textContent = `Punktestand nach Runde ${done}`;
+    $("lu-so-scores").innerHTML = [mine, opp].map((p) => `
+      <div class="lu-so-player${p === mine ? " me" : ""}">
+        <span class="lu-so-name">${escapeHtml(p === mine ? "Du" : p.name)}</span>
+        <span class="lu-points">${p.score}</span>
+      </div>`).join('<span class="lu-vs">:</span>');
+    $("lu-so-opp").textContent = `Noch offene Karten von ${opp.name}`;
+    $("lu-so-hand").innerHTML = opp.hand.map((c) => `<span class="mini-card">${c}</span>`).join("");
+    $("lu-so-trap").textContent = trapText(mine, true);
+
+    const box = $("lu-score-overlay");
+    box.hidden = false;
+    const bar = $("lu-so-bar");
+    bar.classList.remove("run");
+    void bar.offsetWidth; // Countdown-Animation neu starten
+    bar.classList.add("run");
+    clearTimeout(overlayTimer);
+    overlayTimer = setTimeout(hideScoreOverlay, 5000);
+  }
+
+  function hideScoreOverlay() {
+    clearTimeout(overlayTimer);
+    $("lu-score-overlay").hidden = true;
   }
 
   function renderGame() {
@@ -149,7 +157,13 @@ const LUOnline = (() => {
       ? "Das Spiel ist vorbei."
       : `Runde ${g.round} von ${g.rounds} · ${amAttacker ? "Du legst zuerst" : `${name(g.attacker)} legt zuerst`}`;
 
-    renderBoard();
+    // Nach jeder beendeten Runde kurz den Punktestand zeigen
+    if (shownRound === null) shownRound = g.round; // nicht direkt nach dem Neuladen
+    if (g.phase === "play" && g.round !== shownRound) {
+      shownRound = g.round;
+      if (g.round > 1) showScoreOverlay();
+    }
+    if (g.phase !== "play") hideScoreOverlay();
 
     // Ergebnis
     const banner = $("lu-result");
@@ -224,6 +238,11 @@ const LUOnline = (() => {
         renderGame();
       }
     });
+    // Eine Lüge bringt +2, solange der Gegner noch Lügnerjoker hat
+    const opp = state.game.players.find((p) => p.id === state.game.opp);
+    const liePoints = opp && opp.jokers > 0 ? 2 : 0;
+    $("lu-claim-truth").textContent = "Wahrheit";
+    $("lu-claim-lie").textContent = `Lüge (+${liePoints})`;
     $("lu-att-claim").querySelectorAll("[data-claim]").forEach((b) => {
       b.classList.toggle("selected", draft.claim === b.dataset.claim);
     });
@@ -245,7 +264,7 @@ const LUOnline = (() => {
         hint.classList.add("bad");
       } else {
         ok = true;
-        hint.textContent = draft.claim === "lie" ? "🤥 Du lügst – hoffentlich merkt er's nicht." : "✅ Du sagst die Wahrheit.";
+        hint.textContent = draft.claim === "lie" ? "Du lügst – hoffentlich merkt er's nicht." : "Du sagst die Wahrheit.";
         hint.classList.add("good");
       }
     }
@@ -345,6 +364,7 @@ const LUOnline = (() => {
   /* ---------- Events ---------- */
   document.addEventListener("DOMContentLoaded", () => {
     $("lu-trap-submit").addEventListener("click", submitTrap);
+    $("lu-score-overlay").addEventListener("click", hideScoreOverlay);
     $("lu-attack").addEventListener("submit", submitAttack);
     $("lu-att-claim").addEventListener("click", (e) => {
       const b = e.target.closest("[data-claim]");

@@ -517,7 +517,19 @@ button.term-box { cursor: pointer; }
 .num-btn:disabled { opacity: .2; cursor: default; transform: none; }
 .trap-preview { margin: 0; color: var(--primary-2); font-weight: 600; }
 
-.lu-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+/* Punktestand nach jeder Runde */
+.lu-score-overlay { cursor: pointer; }
+.lu-so-scores { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.lu-so-player { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.lu-so-name { font-weight: 600; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lu-so-player .lu-points { font-size: 3rem; }
+.lu-so-player.me .lu-points { color: var(--primary-2); }
+.lu-so-hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.lu-so-hand .mini-card { width: 30px; font-size: .95rem; }
+.lu-so-track { height: 4px; border-radius: 999px; background: var(--bg-2); overflow: hidden; }
+.lu-so-bar { height: 100%; width: 100%; background: var(--primary); transform-origin: left; }
+.lu-so-bar.run { animation: lu-countdown 5s linear forwards; }
+@keyframes lu-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .lu-player {
   min-width: 0; background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   padding: 12px; display: flex; flex-direction: column; gap: 10px;

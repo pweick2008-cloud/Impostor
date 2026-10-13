@@ -406,7 +406,6 @@
         </div>
       </div>
 
-      <div id="lu-board" class="lu-board"></div>
 
       <!-- Angreifer: Karte, 3 Zahlen, Wahrheit/Lüge -->
       <form id="lu-attack" class="card lu-action in-game" autocomplete="off" hidden>
@@ -418,8 +417,8 @@
         <div id="lu-att-nums" class="num-row"></div>
         <h2>3. Sagst du die Wahrheit?</h2>
         <div id="lu-att-claim" class="answer-buttons">
-          <button type="button" class="btn" data-claim="truth">✅ Wahrheit</button>
-          <button type="button" class="btn" data-claim="lie">🤥 Lüge</button>
+          <button type="button" class="btn" data-claim="truth" id="lu-claim-truth">Wahrheit</button>
+          <button type="button" class="btn" data-claim="lie" id="lu-claim-lie">Lüge (+2)</button>
         </div>
         <p id="lu-att-hint" class="lu-hint"></p>
         <button id="lu-att-submit" class="btn primary big" type="submit">Karte verdeckt legen</button>
@@ -646,6 +645,18 @@
       <button id="o-leave" class="btn ghost" type="button">Lobby verlassen</button>
     </section>
   </main>
+
+  <!-- Lügenduell: Punktestand nach jeder Runde (ca. 5 Sekunden) -->
+  <div id="lu-score-overlay" class="overlay lu-score-overlay" hidden>
+    <div class="overlay-box">
+      <span class="role-label" id="lu-so-title"></span>
+      <div class="lu-so-scores" id="lu-so-scores"></div>
+      <span class="small muted" id="lu-so-opp"></span>
+      <div class="lu-so-hand" id="lu-so-hand"></div>
+      <span class="small muted" id="lu-so-trap"></span>
+      <div class="lu-so-track"><div class="lu-so-bar" id="lu-so-bar"></div></div>
+    </div>
+  </div>
 
   <!-- Kurze Hinweise -->
   <div id="toast" class="toast" hidden></div>
