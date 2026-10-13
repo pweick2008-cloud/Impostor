@@ -68,22 +68,56 @@ function clampImpostors() {
 }
 
 /* ---------- Bildschirm-Übergänge ---------- */
-const PHASE_ORDER = ["setup", "reveal", "game"];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let transitioning = Promise.resolve();
 
+let currentGame = "verraeter"; // "verraeter" oder "werbinich"
 let currentMode = "local"; // "local" (Pass & Play) oder "online"
 
+const GAMES = {
+  verraeter: { icon: "🕵️", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
+  werbinich: { icon: "🙋", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." }
+};
+
+// Phasen-Anzeige je Spiel und Modus
+const STEP_PLANS = {
+  "verraeter-local": [["setup", "Start"], ["reveal", "Rollen"], ["game", "Spiel"]],
+  "verraeter-online": [["setup", "Lobby"], ["reveal", "Rollen"], ["game", "Spiel"]],
+  "werbinich-local": [["setup", "Start"], ["assign", "Personen"], ["show", "Zeigen"], ["game", "Spiel"]],
+  "werbinich-online": [["setup", "Lobby"], ["assign", "Personen"], ["game", "Spiel"]]
+};
+
 function updateSteps(phase) {
-  const idx = PHASE_ORDER.indexOf(phase);
-  $("steps").hidden = idx < 0; // im Menü keine Phasen-Anzeige
-  document.querySelector('.step[data-phase="setup"] .label').textContent = currentMode === "online" ? "Lobby" : "Start";
-  document.querySelectorAll(".step").forEach((el) => {
-    const i = PHASE_ORDER.indexOf(el.dataset.phase);
+  const nav = $("steps");
+  const key = `${currentGame}-${currentMode}`;
+  const plan = STEP_PLANS[key];
+  if (nav.dataset.plan !== key) {
+    nav.dataset.plan = key;
+    nav.innerHTML = plan.map(([id, label], i) =>
+      (i ? '<div class="step-line"></div>' : "") +
+      `<div class="step" data-phase="${id}"><span class="dot">${i + 1}</span><span class="label">${label}</span></div>`
+    ).join("");
+  }
+  const order = plan.map(([id]) => id);
+  const idx = order.indexOf(phase);
+  nav.hidden = idx < 0; // in den Menüs keine Phasen-Anzeige
+  nav.querySelectorAll(".step").forEach((el) => {
+    const i = order.indexOf(el.dataset.phase);
     el.classList.toggle("done", i < idx);
     el.classList.toggle("current", i === idx);
   });
-  document.querySelectorAll(".step-line").forEach((el, i) => el.classList.toggle("done", i < idx));
+  nav.querySelectorAll(".step-line").forEach((el, i) => el.classList.toggle("done", i < idx));
+}
+
+// Moduswahl für das gewählte Spiel anzeigen
+function openGameMenu(gameId) {
+  currentGame = gameId;
+  const g = GAMES[gameId];
+  $("menu-logo").textContent = g.icon;
+  $("menu-title").textContent = g.name;
+  $("menu-sub").textContent = g.sub;
+  $("menu-online-note").hidden = true;
+  showScreen("menu");
 }
 
 // Blendet den aktuellen Bildschirm aus und den neuen animiert ein.
@@ -138,6 +172,19 @@ async function animateCard(kind, swap) {
   card.classList.remove(kind + "-in");
 }
 
+/* ---------- Kurzer Hinweis unten am Bildschirm ---------- */
+let toastTimer = null;
+function showToast(text) {
+  const el = $("toast");
+  el.textContent = text;
+  el.hidden = false;
+  el.classList.remove("toast-in");
+  void el.offsetWidth;
+  el.classList.add("toast-in");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+}
+
 /* ---------- Dialog ---------- */
 function showModal({ emoji = "", title = "", text = "", ok = "OK", cancel = null }) {
   return new Promise((resolve) => {
@@ -164,6 +211,8 @@ function showModal({ emoji = "", title = "", text = "", ok = "OK", cancel = null
    Setup-Bildschirm
    ========================================================= */
 function renderSetup() {
+  while (settings.names.length < MIN_PLAYERS) settings.names.push("");
+  clampImpostors();
   // Spielerliste
   const list = $("player-list");
   list.innerHTML = "";
@@ -287,7 +336,7 @@ function startGame() {
     num: 2,
     icon: "🎭",
     title: "Rollen verteilen",
-    text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${settings.impostors} Imposter.`,
+    text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${settings.impostors} Verräter.`,
     button: "Los geht's",
     phase: "reveal"
   }).then(() => {
@@ -321,7 +370,7 @@ function renderReveal() {
     back.innerHTML = `
       <span class="hand">🕵️</span>
       <span class="role-label">${escapeHtml(p.name)}, du bist</span>
-      <span class="role-impostor">IMPOSTER</span>
+      <span class="role-impostor">VERRÄTER</span>
       ${settings.hint ? `<span class="small muted">Kategorie: ${escapeHtml(game.category.icon + " " + game.category.name)}</span>` : ""}
       <span class="small muted">Lass dir nichts anmerken und finde den Begriff heraus!</span>
       <span class="next-hint">${nextText}</span>`;
@@ -364,7 +413,7 @@ async function onRevealTap() {
 }
 
 /* =========================================================
-   Spielrunde: Tipps reihum, Votes, Imposter-Raten, Ergebnis
+   Spielrunde: Tipps reihum, Votes, Verräter-Raten, Ergebnis
    ========================================================= */
 const activePlayers = () => game.players.filter((p) => !p.out);
 const activeImpostors = () => game.players.filter((p) => !p.out && p.impostor);
@@ -419,7 +468,7 @@ function renderGame() {
   const active = activePlayers();
   $("game-sub").textContent = game.over
     ? "Das Spiel ist vorbei."
-    : `${active.length} im Spiel · ${activeImpostors().length} Imposter übrig`;
+    : `${active.length} im Spiel · ${activeImpostors().length} Verräter übrig`;
   $("game-status").textContent = `${active.length}/${game.players.length} aktiv`;
 
   if (!game.over) {
@@ -450,7 +499,7 @@ function renderGame() {
     if (game.over) {
       el.classList.add(p.impostor ? "role-imp" : "role-crew");
       if (p.out) el.classList.add("out");
-      badge = p.impostor ? "Imposter" : "Spieler";
+      badge = p.impostor ? "Verräter" : "Spieler";
     } else if (p.out) {
       el.classList.add("out");
       badge = "Raus";
@@ -611,12 +660,12 @@ function finishVote() {
       : leaders.length > 1 ? "Gleichstand – keine Entscheidung." : "Die Enthaltungen überwiegen.";
   } else if (eliminated.impostor) {
     $("vote-result-emoji").textContent = "🎯";
-    $("vote-result-title").textContent = `${eliminated.name} war ein Imposter!`;
+    $("vote-result-title").textContent = `${eliminated.name} war ein Verräter!`;
     $("vote-result-text").textContent = `${eliminated.name} ist raus.`;
   } else {
     $("vote-result-emoji").textContent = "😱";
     $("vote-result-title").textContent = `${eliminated.name} war unschuldig!`;
-    $("vote-result-text").textContent = `${eliminated.name} war kein Imposter.`;
+    $("vote-result-text").textContent = `${eliminated.name} war kein Verräter.`;
   }
   showVoteStep("result");
 }
@@ -640,22 +689,22 @@ function closeVote() {
   p.out = true;
   if (!p.impostor) {
     p.result = "rausgewählt (war unschuldig)";
-    addLog(`Vote: ${p.name} wurde rausgewählt – war KEIN Imposter.`);
+    addLog(`Vote: ${p.name} wurde rausgewählt – war KEIN Verräter.`);
     endGame("impostor", `${p.name} war unschuldig und wurde rausgewählt.`);
     return;
   }
 
   p.result = "rausgewählt";
-  addLog(`Vote: ${p.name} wurde rausgewählt – war ein Imposter!`);
+  addLog(`Vote: ${p.name} wurde rausgewählt – war ein Verräter!`);
   if (activeImpostors().length === 0) {
-    endGame("crew", "Alle Imposter wurden enttarnt.");
+    endGame("crew", "Alle Verräter wurden enttarnt.");
     return;
   }
   fixTurn();
   renderGame();
 }
 
-/* ---------- Imposter rät den Begriff ---------- */
+/* ---------- Verräter rät den Begriff ---------- */
 function openGuess() {
   if (game.over) return;
   const sel = $("guess-name");
@@ -690,7 +739,7 @@ async function onGuess(e) {
   if (!p) return;
   if (!p.impostor) {
     $("guess-word").value = "";
-    await showModal({ emoji: "🚫", title: "Nicht erlaubt", text: "Nur Imposter dürfen den Begriff raten." });
+    await showModal({ emoji: "🚫", title: "Nicht erlaubt", text: "Nur Verräter dürfen den Begriff raten." });
     return;
   }
 
@@ -702,13 +751,13 @@ async function onGuess(e) {
   p.result = correct ? "hat den Begriff erraten 🏆" : "hat falsch geraten";
 
   if (wasLast) {
-    // Einziger (verbleibender) Imposter: entscheidet das ganze Spiel
+    // Einziger (verbleibender) Verräter: entscheidet das ganze Spiel
     addLog(`${p.name} hat ${correct ? "richtig" : "falsch"} geraten.`);
     endGame(correct ? "impostor" : "crew", correct ? `${p.name} hat den Begriff erraten!` : `${p.name} hat den Begriff falsch geraten.`);
     return;
   }
 
-  // Mehrere Imposter: persönlicher Sieg/Niederlage, Spiel läuft weiter, Begriff bleibt geheim
+  // Mehrere Verräter: persönlicher Sieg/Niederlage, Spiel läuft weiter, Begriff bleibt geheim
   addLog(`${p.name} hat ${correct ? "richtig" : "falsch"} geraten und ist ausgeschieden.`);
   fixTurn();
   renderGame();
@@ -716,7 +765,7 @@ async function onGuess(e) {
     emoji: correct ? "🏆" : "💥",
     title: correct ? `${p.name} hat richtig geraten!` : `${p.name} lag falsch!`,
     text: (correct ? `${p.name} gewinnt persönlich` : `${p.name} hat verloren`) +
-      ` und ist ausgeschieden.\nDer Begriff bleibt geheim – es sind noch ${activeImpostors().length} Imposter im Spiel.`
+      ` und ist ausgeschieden.\nDer Begriff bleibt geheim – es sind noch ${activeImpostors().length} Verräter im Spiel.`
   });
 }
 
@@ -727,7 +776,7 @@ function endGame(winner, reason) {
   banner.classList.remove("crew", "impostor");
   banner.classList.add(winner);
   $("end-emoji").textContent = winner === "crew" ? "🎉" : "🕵️";
-  $("end-title").textContent = winner === "crew" ? "Die Spieler gewinnen!" : "Die Imposter gewinnen!";
+  $("end-title").textContent = winner === "crew" ? "Die Spieler gewinnen!" : "Die Verräter gewinnen!";
   $("end-reason").textContent = reason;
   $("end-word").textContent = game.word;
   $("end-category").textContent = `${game.category.icon} ${game.category.name}`;
@@ -758,11 +807,18 @@ async function abortGame() {
    ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
-  updateSteps("menu");
+  updateSteps("hub");
   renderSetup();
 
+  document.querySelectorAll("[data-game]").forEach((b) =>
+    b.addEventListener("click", () => openGameMenu(b.dataset.game))
+  );
   $("menu-local").addEventListener("click", () => {
     currentMode = "local";
+    if (currentGame === "werbinich") {
+      WBI.openSetup();
+      return;
+    }
     renderSetup();
     showScreen("setup");
   });

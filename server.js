@@ -1,6 +1,6 @@
 "use strict";
 
-// Imposter – Online-Server
+// Partyspiele – Online-Server (Verräter & Wer bin ich?)
 // Liefert die Website aus und verwaltet Lobbys über WebSockets.
 // Der Server kennt alle Rollen und den Begriff; jeder Spieler bekommt
 // nur die Informationen, die er sehen darf.
@@ -14,7 +14,9 @@ const { CATEGORIES } = require("./words.js");
 const { shuffle, pick, normalize, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 
 const PORT = process.env.PORT || 3000;
-const MIN_PLAYERS = 3;
+const MIN_PLAYERS = 3; // Verräter
+const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2 };
+const GAME_TYPES = ["verraeter", "werbinich"];
 const MAX_PLAYERS = 20;
 const LOBBY_IDLE_MS = 30 * 60 * 1000; // leere Lobbys werden nach 30 Min. gelöscht
 const DIFFICULTIES = ["leicht", "mittel", "schwer", "gemischt"];
@@ -29,7 +31,9 @@ const STATIC = {
   "/app.js": ["app.js", "text/javascript; charset=utf-8"],
   "/online.js": ["online.js", "text/javascript; charset=utf-8"],
   "/shared.js": ["shared.js", "text/javascript; charset=utf-8"],
-  "/words.js": ["words.js", "text/javascript; charset=utf-8"]
+  "/words.js": ["words.js", "text/javascript; charset=utf-8"],
+  "/wbi.js": ["wbi.js", "text/javascript; charset=utf-8"],
+  "/wbi-online.js": ["wbi-online.js", "text/javascript; charset=utf-8"]
 };
 
 const server = http.createServer((req, res) => {
@@ -110,11 +114,17 @@ function viewFor(lobby, me) {
     you: me.id,
     code: lobby.code,
     hostId: lobby.hostId,
+    gameType: lobby.gameType,
+    minPlayers: MIN_PLAYERS_BY_GAME[lobby.gameType],
     settings: lobby.settings,
     players: lobby.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected })),
     game: null
   };
   if (!g) return view;
+  if (g.type === "werbinich") {
+    view.game = wbiView(lobby, g, me);
+    return view;
+  }
 
   const over = g.phase === "over";
   const inGame = g.order.includes(me.id);
@@ -211,6 +221,7 @@ function startGame(lobby) {
   const ids = players.map((p) => p.id);
   const names = Object.fromEntries(players.map((p) => [p.id, p.name]));
   lobby.game = {
+    type: "verraeter",
     phase: "reveal",
     entry,
     word: displayWord(entry),
@@ -294,30 +305,31 @@ function finishVote(lobby) {
   g.out.add(eliminated);
   if (!g.impostors.has(eliminated)) {
     g.results[eliminated] = "rausgewählt (war unschuldig)";
-    g.log.push(`Vote: ${name} wurde rausgewählt – war KEIN Imposter.`);
-    broadcastEvent(lobby, { emoji: "😱", title: `${name} war unschuldig!`, text: `${name} war kein Imposter.`, tally });
+    g.log.push(`Vote: ${name} wurde rausgewählt – war KEIN Verräter.`);
+    broadcastEvent(lobby, { emoji: "😱", title: `${name} war unschuldig!`, text: `${name} war kein Verräter.`, tally });
     endGame(lobby, "impostor", `${name} war unschuldig und wurde rausgewählt.`);
     return;
   }
 
   g.results[eliminated] = "rausgewählt";
-  g.log.push(`Vote: ${name} wurde rausgewählt – war ein Imposter!`);
-  if (!checkImpostorsGone(lobby, "Alle Imposter wurden enttarnt.")) {
+  g.log.push(`Vote: ${name} wurde rausgewählt – war ein Verräter!`);
+  if (!checkImpostorsGone(lobby, "Alle Verräter wurden enttarnt.")) {
     broadcastEvent(lobby, {
       emoji: "🎯",
-      title: `${name} war ein Imposter!`,
-      text: `${name} ist raus. Es sind noch Imposter im Spiel.`,
+      title: `${name} war ein Verräter!`,
+      text: `${name} ist raus. Es sind noch Verräter im Spiel.`,
       tally
     });
     fixTurn(g);
   } else {
-    broadcastEvent(lobby, { emoji: "🎯", title: `${name} war ein Imposter!`, text: `${name} ist raus.`, tally });
+    broadcastEvent(lobby, { emoji: "🎯", title: `${name} war ein Verräter!`, text: `${name} ist raus.`, tally });
   }
 }
 
 // Spieler verlässt eine laufende Partie endgültig
 function dropFromGame(lobby, id) {
   const g = lobby.game;
+  if (g && g.type === "werbinich") return wbiDrop(lobby, id);
   if (!g || g.phase === "over" || !g.order.includes(id) || g.out.has(id)) return;
   g.out.add(id);
   g.results[id] = "hat das Spiel verlassen";
@@ -328,7 +340,7 @@ function dropFromGame(lobby, id) {
     g.vote.ballots.delete(id);
     for (const [voter, target] of g.vote.ballots) if (target === id) g.vote.ballots.set(voter, null);
   }
-  if (checkImpostorsGone(lobby, "Kein Imposter ist mehr im Spiel.")) return;
+  if (checkImpostorsGone(lobby, "Kein Verräter ist mehr im Spiel.")) return;
   if (activeIds(g).filter((x) => !g.impostors.has(x)).length === 0) {
     endGame(lobby, "impostor", "Es sind keine normalen Spieler mehr übrig.");
     return;
@@ -382,6 +394,7 @@ const handlers = {
     leaveCurrent(ws);
     const lobby = {
       code: newCode(),
+      gameType: GAME_TYPES.includes(msg.gameType) ? msg.gameType : "verraeter",
       hostId: null,
       players: [],
       settings: sanitizeSettings({ ...(msg.settings || {}) }, 1),
@@ -452,8 +465,10 @@ const handlers = {
   start(ws, msg, lobby, me) {
     requireHost(lobby, me);
     if (lobby.game && lobby.game.phase !== "over") fail("Das Spiel läuft bereits.");
-    if (lobby.players.length < MIN_PLAYERS) fail(`Ihr braucht mindestens ${MIN_PLAYERS} Spieler.`);
-    startGame(lobby);
+    const min = MIN_PLAYERS_BY_GAME[lobby.gameType];
+    if (lobby.players.length < min) fail(`Ihr braucht mindestens ${min} Spieler.`);
+    if (lobby.gameType === "werbinich") wbiStart(lobby);
+    else startGame(lobby);
     return lobby;
   },
 
@@ -548,7 +563,7 @@ const handlers = {
 
   guess(ws, msg, lobby, me) {
     const g = requireGame(lobby, "play");
-    if (!activeIds(g).includes(me.id) || !g.impostors.has(me.id)) fail("Nur Imposter dürfen den Begriff raten.");
+    if (!activeIds(g).includes(me.id) || !g.impostors.has(me.id)) fail("Nur Verräter dürfen den Begriff raten.");
     const guess = String(msg.word || "").trim();
     if (!guess) fail("Bitte gib einen Begriff ein.");
 
@@ -568,12 +583,12 @@ const handlers = {
       return lobby;
     }
 
-    // Mehrere Imposter: persönlicher Sieg/Niederlage, Begriff bleibt geheim
+    // Mehrere Verräter: persönlicher Sieg/Niederlage, Begriff bleibt geheim
     g.log.push(`${me.name} hat ${correct ? "richtig" : "falsch"} geraten und ist ausgeschieden.`);
     broadcastEvent(lobby, {
       emoji: correct ? "🏆" : "💥",
       title: correct ? `${me.name} hat richtig geraten!` : `${me.name} lag falsch!`,
-      text: `${me.name} war Imposter, ${correct ? "gewinnt persönlich" : "hat verloren"} und ist ausgeschieden. Der Begriff bleibt geheim.`
+      text: `${me.name} war Verräter, ${correct ? "gewinnt persönlich" : "hat verloren"} und ist ausgeschieden. Der Begriff bleibt geheim.`
     });
     fixTurn(g);
     if (g.vote && g.vote.voters.every((id) => g.vote.ballots.has(id))) finishVote(lobby);
@@ -592,9 +607,9 @@ function requireHost(lobby, me) {
   if (lobby.hostId !== me.id) fail("Das darf nur der Host.");
 }
 
-function requireGame(lobby, phase) {
+function requireGame(lobby, phase, type = "verraeter") {
   const g = lobby.game;
-  if (!g || g.phase !== phase) fail("Das geht gerade nicht.");
+  if (!g || g.type !== type || g.phase !== phase) fail("Das geht gerade nicht.");
   return g;
 }
 
@@ -606,6 +621,262 @@ function leaveCurrent(ws) {
   removePlayer(lobby, player);
   if (lobbies.has(lobby.code)) broadcastState(lobby);
 }
+
+
+/* =========================================================
+   Wer bin ich? – Online
+   Jeder denkt sich eine Person für einen anderen Spieler aus. Danach sieht
+   jeder die Personen aller anderen, nur die eigene nicht. Wer dran ist,
+   schreibt eine Ja/Nein-Frage; die anderen stimmen mit Ja, Nein oder
+   Enthaltung ab. Bei „Ja“ darf man weiterfragen, sonst ist der Nächste dran.
+   ========================================================= */
+function randomPerson(exclude = []) {
+  const pool = ["promis", "geschichte", "streamer"]
+    .flatMap((id) => Object.values(CATEGORIES[id].words).flat())
+    .map(displayWord);
+  const taken = new Set(exclude.map(normalize));
+  const free = pool.filter((p) => !taken.has(normalize(p)));
+  return pick(free.length ? free : pool);
+}
+
+const wbiInGame = (g) => g.order.filter((id) => !g.left.has(id));
+const wbiUnsolved = (g) => wbiInGame(g).filter((id) => !g.ranks[id]);
+
+function wbiStart(lobby) {
+  const ids = shuffle(lobby.players.map((p) => p.id));
+  lobby.game = {
+    type: "werbinich",
+    phase: "assign",
+    order: ids,
+    names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
+    // Jeder denkt sich eine Person für den Nächsten im Kreis aus
+    targetOf: Object.fromEntries(ids.map((id, i) => [id, ids[(i + 1) % ids.length]])),
+    terms: {}, // Ziel-ID → Person
+    ranks: {},
+    solvedCount: 0,
+    left: new Set(),
+    turn: 0,
+    question: null,
+    history: Object.fromEntries(ids.map((id) => [id, []])),
+    log: []
+  };
+}
+
+function wbiView(lobby, g, me) {
+  const over = g.phase === "over";
+  const writerOf = Object.fromEntries(Object.entries(g.targetOf).map(([w, t]) => [t, w]));
+  const q = g.question;
+  const myTarget = g.targetOf[me.id];
+  return {
+    type: "werbinich",
+    phase: g.phase,
+    inGame: g.order.includes(me.id),
+    players: g.order.map((id) => {
+      const p = lobby.players.find((x) => x.id === id);
+      return {
+        id,
+        name: g.names[id],
+        connected: !!(p && p.connected),
+        left: g.left.has(id),
+        rank: g.ranks[id] || null,
+        // Die eigene Person bleibt bis zum Spielende geheim
+        term: id !== me.id || over || g.ranks[id] ? g.terms[id] || null : null,
+        termBy: g.names[writerOf[id]] || null,
+        assignDone: !!g.terms[g.targetOf[id]] || g.left.has(id),
+        history: g.history[id]
+      };
+    }),
+    myTarget: g.phase === "assign" && myTarget
+      ? { id: myTarget, name: g.names[myTarget], term: g.terms[myTarget] || "" }
+      : null,
+    turnId: g.phase === "play" ? g.order[g.turn] : null,
+    question: q
+      ? {
+          asker: q.asker,
+          text: q.text,
+          voters: q.voters.length,
+          answered: q.answers.size,
+          canAnswer: q.voters.includes(me.id),
+          myAnswer: q.answers.get(me.id) || null
+        }
+      : null,
+    log: g.log
+  };
+}
+
+function wbiNextTurn(g) {
+  const n = g.order.length;
+  for (let i = 1; i <= n; i++) {
+    const j = (g.turn + i) % n;
+    const id = g.order[j];
+    if (!g.left.has(id) && !g.ranks[id]) {
+      g.turn = j;
+      return;
+    }
+  }
+}
+
+function wbiFixTurn(g) {
+  const id = g.order[g.turn];
+  if (g.left.has(id) || g.ranks[id]) wbiNextTurn(g);
+}
+
+function wbiCheckAssignDone(lobby) {
+  const g = lobby.game;
+  if (wbiInGame(g).every((id) => g.terms[id])) {
+    g.phase = "play";
+    g.turn = 0;
+    wbiFixTurn(g);
+    g.log.push(`Alle Personen sind vergeben. ${g.names[g.order[g.turn]]} beginnt.`);
+  }
+}
+
+// Ist höchstens noch einer übrig, ist das Spiel vorbei.
+function wbiCheckEnd(lobby) {
+  const g = lobby.game;
+  if (wbiUnsolved(g).length > 1) return false;
+  g.phase = "over";
+  g.question = null;
+  return true;
+}
+
+function wbiResolve(lobby) {
+  const g = lobby.game;
+  const q = g.question;
+  let yes = 0;
+  let no = 0;
+  for (const a of q.answers.values()) {
+    if (a === "yes") yes++;
+    else if (a === "no") no++; // Enthaltungen zählen nicht
+  }
+  const isYes = yes > no;
+  g.history[q.asker].push({ q: q.text, a: isYes ? "Ja" : "Nein", yes, no });
+  g.log.push(`${g.names[q.asker]}: „${q.text}“ → ${isYes ? "Ja" : "Nein"} (${yes}:${no})`);
+  g.question = null;
+  broadcastEvent(lobby, {
+    toast: true,
+    text: `„${q.text}“ → ${isYes ? "👍 Ja" : "👎 Nein"} (${yes}:${no})` +
+      (isYes ? ` – ${g.names[q.asker]} darf weiterfragen.` : "")
+  });
+  if (!isYes) wbiNextTurn(g);
+}
+
+function wbiDrop(lobby, id) {
+  const g = lobby.game;
+  if (g.phase === "over" || !g.order.includes(id) || g.left.has(id)) return;
+  g.left.add(id);
+  g.log.push(`${g.names[id]} hat das Spiel verlassen.`);
+
+  if (g.phase === "assign") {
+    // Wer für den Gehenden schreiben sollte, braucht keine Person mehr; fehlt dem
+    // Ziel des Gehenden noch eine Person, wird sie zufällig vergeben.
+    const target = g.targetOf[id];
+    if (!g.terms[target]) g.terms[target] = randomPerson(Object.values(g.terms));
+    if (!wbiCheckEnd(lobby)) wbiCheckAssignDone(lobby);
+    return;
+  }
+
+  const q = g.question;
+  if (q) {
+    if (q.asker === id) g.question = null;
+    else {
+      q.voters = q.voters.filter((v) => v !== id);
+      q.answers.delete(id);
+    }
+  }
+  if (wbiCheckEnd(lobby)) return;
+  wbiFixTurn(g);
+  if (g.question && g.question.voters.every((v) => g.question.answers.has(v))) wbiResolve(lobby);
+}
+
+function wbiRequireTurn(g, me) {
+  if (g.order[g.turn] !== me.id) fail("Du bist gerade nicht dran.");
+}
+
+Object.assign(handlers, {
+  wbiTerm(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "assign", "werbinich");
+    if (!g.order.includes(me.id) || g.left.has(me.id)) fail("Du spielst in dieser Runde nicht mit.");
+    const text = String(msg.text || "").trim().replace(/\s+/g, " ").slice(0, 40);
+    if (!normalize(text)) fail("Bitte gib eine Person ein.");
+    g.terms[g.targetOf[me.id]] = text;
+    wbiCheckAssignDone(lobby);
+    return lobby;
+  },
+
+  wbiFill(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = requireGame(lobby, "assign", "werbinich");
+    for (const id of wbiInGame(g)) {
+      if (!g.terms[id]) g.terms[id] = randomPerson(Object.values(g.terms));
+    }
+    g.log.push("Der Host hat fehlende Personen zufällig vergeben.");
+    wbiCheckAssignDone(lobby);
+    return lobby;
+  },
+
+  wbiAsk(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "play", "werbinich");
+    wbiRequireTurn(g, me);
+    if (g.question) fail("Über deine Frage wird gerade abgestimmt.");
+    const text = String(msg.text || "").trim().replace(/\s+/g, " ").slice(0, 140);
+    if (!normalize(text)) fail("Bitte schreib eine Frage.");
+    const voters = wbiInGame(g).filter((id) => id !== me.id);
+    g.question = { asker: me.id, text, voters, answers: new Map() };
+    return lobby;
+  },
+
+  wbiAnswer(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "play", "werbinich");
+    const q = g.question;
+    if (!q) fail("Gerade gibt es keine Frage.");
+    if (!q.voters.includes(me.id)) fail("Du kannst bei dieser Frage nicht abstimmen.");
+    if (q.answers.has(me.id)) fail("Du hast schon abgestimmt.");
+    if (!["yes", "no", "abstain"].includes(msg.answer)) fail("Ungültige Antwort.");
+    q.answers.set(me.id, msg.answer);
+    if (q.voters.every((id) => q.answers.has(id))) wbiResolve(lobby);
+    return lobby;
+  },
+
+  wbiResolve(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = requireGame(lobby, "play", "werbinich");
+    if (!g.question) fail("Gerade gibt es keine Frage.");
+    wbiResolve(lobby);
+    return lobby;
+  },
+
+  wbiGuess(ws, msg, lobby, me) {
+    const g = requireGame(lobby, "play", "werbinich");
+    wbiRequireTurn(g, me);
+    if (g.question) fail("Warte, bis über deine Frage abgestimmt wurde.");
+    const text = String(msg.text || "").trim().slice(0, 40);
+    if (!normalize(text)) fail("Bitte gib eine Person ein.");
+
+    const term = g.terms[me.id];
+    if (isCorrectGuess(text, term, true)) {
+      g.ranks[me.id] = ++g.solvedCount;
+      g.log.push(`${me.name} hat es erraten: ${term} (Platz ${g.ranks[me.id]})`);
+      broadcastEvent(lobby, { emoji: "🎉", title: `${me.name} hat es erraten!`, text: `${me.name} ist ${term} – Platz ${g.ranks[me.id]}!` });
+      if (!wbiCheckEnd(lobby)) wbiNextTurn(g);
+    } else {
+      g.log.push(`${me.name} hat „${text}“ geraten – falsch.`);
+      broadcastEvent(lobby, { toast: true, text: `❌ ${me.name} hat „${text}“ geraten – falsch.` });
+      wbiNextTurn(g);
+    }
+    return lobby;
+  },
+
+  wbiSkip(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = requireGame(lobby, "play", "werbinich");
+    const skipped = g.order[g.turn];
+    g.question = null;
+    wbiNextTurn(g);
+    g.log.push(`${g.names[skipped]} wurde übersprungen.`);
+    return lobby;
+  }
+});
 
 /* =========================================================
    WebSocket-Verbindungen
@@ -669,5 +940,5 @@ setInterval(() => {
 }, 25000);
 
 server.listen(PORT, () => {
-  console.log(`Imposter läuft auf http://localhost:${PORT}`);
+  console.log(`Partyspiele laufen auf http://localhost:${PORT}`);
 });

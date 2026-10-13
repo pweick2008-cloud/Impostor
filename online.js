@@ -127,6 +127,10 @@
         }
         break;
       case "event":
+        if (msg.toast) {
+          showToast(msg.text);
+          break;
+        }
         if (msg.silent) {
           if (navigator.vibrate) navigator.vibrate(200);
           break;
@@ -154,10 +158,14 @@
     $("on-error").hidden = !text;
   }
 
-  function openOnlineHome(error = "") {
+  function openOnlineHome(error = "", invited = false) {
     currentMode = "online";
     lastScreen = "online";
     showError(error);
+    $("on-create-card").hidden = invited;
+    $("online-sub").textContent = invited
+      ? "Du wurdest eingeladen – gib deinen Namen ein."
+      : `${GAMES[currentGame].name} · Jeder auf seinem eigenen Gerät`;
     $("on-name").value = store.get("localStorage", NAME_KEY) || $("on-name").value;
     showScreen("online", "setup");
   }
@@ -167,7 +175,7 @@
     if (screen === "o-reveal") roleShown = false;
     if (screen === "o-game") myRoleShown = false;
     lastScreen = screen;
-    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game" }[screen];
+    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game" }[screen];
     showScreen(screen, phase);
   }
 
@@ -175,8 +183,11 @@
 
   function render() {
     currentMode = "online";
+    currentGame = state.gameType;
     const g = state.game;
-    if (!g || !g.inGame) {
+    if (g && g.inGame && g.type === "werbinich") {
+      goto(WBIOnline.render(state));
+    } else if (!g || !g.inGame) {
       renderLobby();
       goto("lobby");
     } else if (g.phase === "reveal") {
@@ -244,12 +255,14 @@
     $("lobby-hint").checked = s.hint;
     $("lobby-hint").disabled = !host;
 
-    const enough = state.players.length >= MIN_PLAYERS;
+    $("lobby-game").textContent = `${GAMES[state.gameType].icon} ${GAMES[state.gameType].name} · Code zum Beitreten`;
+    $("lobby-settings").hidden = state.gameType !== "verraeter";
+    const enough = state.players.length >= state.minPlayers;
     $("lobby-start").hidden = !host;
     $("lobby-start").disabled = !enough;
     $("lobby-start").textContent = enough
       ? (state.game ? "Neue Runde starten" : "Spiel starten")
-      : `Mindestens ${MIN_PLAYERS} Spieler nötig`;
+      : `Mindestens ${state.minPlayers} Spieler nötig`;
     $("lobby-wait").hidden = host;
   }
 
@@ -263,7 +276,7 @@
     const note = $("lobby-share-note");
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Imposter", text: `Spiel mit! Lobby-Code: ${state.code}`, url });
+        await navigator.share({ title: "Verräter", text: `Spiel mit! Lobby-Code: ${state.code}`, url });
         return;
       } catch (e) {
         if (e && e.name === "AbortError") return;
@@ -284,7 +297,7 @@
       return `
         <span class="hand">🕵️</span>
         <span class="role-label">Du bist</span>
-        <span class="role-impostor">IMPOSTER</span>
+        <span class="role-impostor">VERRÄTER</span>
         ${me.category ? `<span class="small muted">Kategorie: ${escapeHtml(me.category)}</span>` : ""}
         ${compact ? "" : `<span class="small muted">Lass dir nichts anmerken und finde den Begriff heraus!</span>`}`;
     }
@@ -345,7 +358,7 @@
     const iAmActive = !g.me.out;
 
     screen.classList.toggle("over", over);
-    $("o-sub").textContent = over ? "Das Spiel ist vorbei." : `${active.length} im Spiel · ${g.impostorsLeft} Imposter übrig`;
+    $("o-sub").textContent = over ? "Das Spiel ist vorbei." : `${active.length} im Spiel · ${g.impostorsLeft} Verräter übrig`;
     $("o-status").textContent = `${active.length}/${g.players.length} aktiv`;
 
     // Ergebnis
@@ -356,7 +369,7 @@
       banner.classList.remove("crew", "impostor");
       banner.classList.add(r.winner);
       $("o-end-emoji").textContent = r.winner === "crew" ? "🎉" : "🕵️";
-      $("o-end-title").textContent = r.winner === "crew" ? "Die Spieler gewinnen!" : "Die Imposter gewinnen!";
+      $("o-end-title").textContent = r.winner === "crew" ? "Die Spieler gewinnen!" : "Die Verräter gewinnen!";
       $("o-end-reason").textContent = `${r.reason} ${meWon ? "Du hast gewonnen!" : "Du hast verloren."}`;
       $("o-end-word").textContent = r.word;
       $("o-end-category").textContent = r.category;
@@ -377,7 +390,7 @@
     myrole.classList.toggle("impostor", myRoleShown && g.me.impostor);
     myrole.innerHTML = myRoleShown
       ? (g.me.impostor
-        ? `<span>🕵️ Du bist <strong>Imposter</strong>${g.me.category ? ` · ${escapeHtml(g.me.category)}` : ""}</span>`
+        ? `<span>🕵️ Du bist <strong>Verräter</strong>${g.me.category ? ` · ${escapeHtml(g.me.category)}` : ""}</span>`
         : `<span>✅ Dein Begriff: <strong>${escapeHtml(g.me.word)}</strong></span>`) + `<span class="muted small">verdecken</span>`
       : `<span>🔒 Deine Rolle</span><span class="muted small">antippen zum Anzeigen</span>`;
 
@@ -441,7 +454,7 @@
       if (over) {
         el.classList.add(p.role === "impostor" ? "role-imp" : "role-crew");
         if (p.out) el.classList.add("out");
-        badge = p.role === "impostor" ? "Imposter" : "Spieler";
+        badge = p.role === "impostor" ? "Verräter" : "Spieler";
       } else if (p.out) {
         el.classList.add("out");
         badge = "Raus";
@@ -471,7 +484,7 @@
       wrap.appendChild(el);
     }
 
-    // Begriff raten: nur für aktive Imposter sichtbar
+    // Begriff raten: nur für aktive Verräter sichtbar
     $("o-guess").hidden = over || !g.me.impostor || g.me.out;
     if ($("o-guess").hidden) $("o-guess-panel").hidden = true;
 
@@ -544,7 +557,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     if (!ONLINE_AVAILABLE) {
       $("menu-online").classList.add("disabled");
-      $("menu-online-note").textContent = "Online spielen geht nur, wenn die Seite über den Imposter-Server geöffnet wird (siehe Anleitung im README).";
+      $("menu-online-note").textContent = "Online spielen geht nur, wenn die Seite über den Spiele-Server geöffnet wird (siehe Anleitung im README).";
     }
 
     $("menu-online").addEventListener("click", () => {
@@ -560,7 +573,7 @@
       }
     });
 
-    $("on-create").addEventListener("click", () => startOnline({ type: "create", settings: { ...settings } }));
+    $("on-create").addEventListener("click", () => startOnline({ type: "create", gameType: currentGame, settings: { ...settings } }));
     $("on-join-form").addEventListener("submit", (e) => {
       e.preventDefault();
       const code = $("on-code").value.trim().toUpperCase();
@@ -632,8 +645,10 @@
       currentMode = "online";
       connect();
     } else if (invite) {
-      openOnlineHome();
+      openOnlineHome("", true);
       $("on-code").value = invite;
     }
   });
+  // Für Wer bin ich? (wbi-online.js)
+  window.Online = { send, isHost, leaveLobby, confirmHost, getState: () => state };
 })();

@@ -4,20 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#14111f">
-  <title>Imposter</title>
+  <title>Partyspiele</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main id="app">
 
     <!-- Phasen-Anzeige -->
-    <nav id="steps" class="steps" aria-label="Spielphasen">
-      <div class="step" data-phase="setup"><span class="dot">1</span><span class="label">Start</span></div>
-      <div class="step-line"></div>
-      <div class="step" data-phase="reveal"><span class="dot">2</span><span class="label">Rollen</span></div>
-      <div class="step-line"></div>
-      <div class="step" data-phase="game"><span class="dot">3</span><span class="label">Spiel</span></div>
-    </nav>
+    <nav id="steps" class="steps" aria-label="Spielphasen" hidden></nav>
 
     <!-- ============ ÜBERGANG ZWISCHEN DEN PHASEN ============ -->
     <section id="screen-phase" class="screen">
@@ -30,13 +24,36 @@
       </button>
     </section>
 
-    <!-- ============ SETUP ============ -->
-    <!-- ============ HAUPTMENÜ ============ -->
-    <section id="screen-menu" class="screen active">
+    <!-- ============ SPIELAUSWAHL ============ -->
+    <section id="screen-hub" class="screen active">
       <header class="title menu-title">
-        <span class="menu-logo">🕵️</span>
-        <h1>Imposter</h1>
-        <p class="sub">Einer kennt den Begriff nicht. Findet ihn!</p>
+        <span class="menu-logo">🎲</span>
+        <h1>Partyspiele</h1>
+        <p class="sub">Wählt euer Spiel</p>
+      </header>
+      <button class="mode-card game-card" type="button" data-game="verraeter">
+        <span class="mode-icon">🕵️</span>
+        <span class="mode-text">
+          <span class="mode-title">Verräter</span>
+          <span class="mode-desc">Alle kennen den Begriff – nur der Verräter nicht. Findet ihn, bevor er den Begriff errät.</span>
+        </span>
+      </button>
+      <button class="mode-card game-card" type="button" data-game="werbinich">
+        <span class="mode-icon">🙋</span>
+        <span class="mode-text">
+          <span class="mode-title">Wer bin ich?</span>
+          <span class="mode-desc">Jeder bekommt eine Person, die alle kennen außer ihm selbst. Findet mit Ja/Nein-Fragen heraus, wer ihr seid.</span>
+        </span>
+      </button>
+    </section>
+
+    <!-- ============ MODUSWAHL ============ -->
+    <section id="screen-menu" class="screen">
+      <button class="back-link" type="button" data-back="hub">← Spiele</button>
+      <header class="title menu-title">
+        <span class="menu-logo" id="menu-logo">🕵️</span>
+        <h1 id="menu-title">Verräter</h1>
+        <p class="sub" id="menu-sub">Einer kennt den Begriff nicht. Findet ihn!</p>
       </header>
       <button id="menu-local" class="mode-card" type="button">
         <span class="mode-icon">📱</span>
@@ -77,11 +94,11 @@
 
       <div class="card">
         <div class="row-between">
-          <h2>Imposter</h2>
+          <h2>Verräter</h2>
           <div class="stepper">
-            <button type="button" data-step="impostors" data-dir="-1" aria-label="Weniger Imposter">−</button>
+            <button type="button" data-step="impostors" data-dir="-1" aria-label="Weniger Verräter">−</button>
             <span id="impostor-count">1</span>
-            <button type="button" data-step="impostors" data-dir="1" aria-label="Mehr Imposter">+</button>
+            <button type="button" data-step="impostors" data-dir="1" aria-label="Mehr Verräter">+</button>
           </div>
         </div>
       </div>
@@ -99,7 +116,7 @@
       <div class="card">
         <label class="toggle">
           <input type="checkbox" id="opt-hint" checked>
-          <span>Imposter sieht die Kategorie</span>
+          <span>Verräter sieht die Kategorie</span>
         </label>
       </div>
 
@@ -174,7 +191,7 @@
         <div id="profiles" class="profiles"></div>
       </div>
 
-      <button id="btn-guess" class="btn imp in-game" type="button">🕵️ Imposter: Begriff raten</button>
+      <button id="btn-guess" class="btn imp in-game" type="button">🕵️ Verräter: Begriff raten</button>
 
       <div class="card" id="log-card" hidden>
         <h2>Verlauf</h2>
@@ -184,12 +201,161 @@
       <button id="btn-abort" class="btn ghost in-game" type="button">Spiel abbrechen</button>
     </section>
 
+
+    <!-- ============ WER BIN ICH? – PASS & PLAY ============ -->
+    <section id="screen-wbi-setup" class="screen">
+      <button class="back-link" type="button" data-back="menu">← Menü</button>
+      <header class="title">
+        <h1>🙋 Wer bin ich?</h1>
+        <p class="sub">Pass &amp; Play · Ein Gerät für alle</p>
+      </header>
+      <div class="card">
+        <div class="row-between">
+          <h2>Spieler</h2>
+          <div class="stepper" id="wbi-stepper">
+            <button type="button" data-dir="-1" aria-label="Spieler entfernen">−</button>
+            <span id="wbi-count">3</span>
+            <button type="button" data-dir="1" aria-label="Spieler hinzufügen">+</button>
+          </div>
+        </div>
+        <div id="wbi-player-list" class="player-list"></div>
+      </div>
+      <div class="card rules">
+        <h2>So geht's</h2>
+        <ol class="small muted">
+          <li>Jeder denkt sich reihum eine Person für einen anderen Spieler aus.</li>
+          <li>Dann hält jeder das Gerät mit dem Bildschirm zu den anderen und tippt blind auf das Feld – alle sehen seine Person, nur er nicht.</li>
+          <li>Wer dran ist, stellt Ja/Nein-Fragen. Bei „Ja“ darf er weiterfragen, bei „Nein“ ist der Nächste dran.</li>
+          <li>Wer dran ist, kann seine Person raten. Richtig = geschafft, falsch = der Nächste ist dran.</li>
+        </ol>
+      </div>
+      <p id="wbi-setup-error" class="error" hidden></p>
+      <button id="wbi-start" class="btn primary big" type="button">Spiel starten</button>
+    </section>
+
+    <section id="screen-wbi-assign" class="screen">
+      <p class="progress" id="wbi-assign-progress"></p>
+      <form id="wbi-assign-form" class="card assign-card" autocomplete="off">
+        <span class="hand">✍️</span>
+        <span class="small">Gib das Gerät an</span>
+        <span class="big-name" id="wbi-writer"></span>
+        <p class="assign-text">Denk dir eine Person für <strong id="wbi-target"></strong> aus.<br><span class="muted small" id="wbi-target-warn"></span></p>
+        <input id="wbi-term" type="text" maxlength="40" placeholder="Name der Person" autocomplete="off" spellcheck="false">
+        <button id="wbi-suggest" class="btn ghost" type="button">🎲 Vorschlag</button>
+        <button class="btn primary big" type="submit">Weiter</button>
+      </form>
+    </section>
+
+    <section id="screen-wbi-show" class="screen">
+      <p class="progress" id="wbi-show-progress"></p>
+      <div class="reveal-stage">
+        <button id="wbi-show-card" class="reveal-card show-card" type="button">
+          <div id="wbi-show-front" class="reveal-face">
+            <span class="hand">🔄</span>
+            <span class="big-name" id="wbi-show-name"></span>
+            <span class="small muted">Dreh das Gerät um, sodass die anderen den Bildschirm sehen.<br>Tippe dann <strong>ohne hinzuschauen</strong> auf das Feld.</span>
+          </div>
+          <div id="wbi-show-back" class="reveal-face" hidden>
+            <span class="role-label" id="wbi-show-for"></span>
+            <span class="show-term" id="wbi-show-term"></span>
+            <span class="next-hint">Nochmal tippen zum Verdecken</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <section id="screen-wbi-game" class="screen">
+      <header class="title">
+        <h1>🙋 Wer bin ich?</h1>
+        <p class="sub" id="wbi-sub"></p>
+      </header>
+
+      <div id="wbi-result" class="end-banner crew" hidden>
+        <span class="end-emoji">🏁</span>
+        <h1>Spiel vorbei!</h1>
+        <ol id="wbi-ranking" class="ranking"></ol>
+        <div class="result-actions">
+          <button id="wbi-again" class="btn primary big" type="button">Neue Runde (gleiche Spieler)</button>
+          <button id="wbi-to-setup" class="btn ghost" type="button">Zurück zu den Einstellungen</button>
+        </div>
+      </div>
+
+      <div id="wbi-cards" class="wbi-cards"></div>
+
+      <button id="wbi-end" class="btn ghost in-game" type="button">Spiel beenden</button>
+    </section>
+
+    <!-- ============ WER BIN ICH? – ONLINE ============ -->
+    <section id="screen-wo-assign" class="screen">
+      <header class="title">
+        <h1>✍️ Personen ausdenken</h1>
+        <p class="sub" id="wo-assign-progress"></p>
+      </header>
+      <form id="wo-assign-form" class="card assign-card" autocomplete="off">
+        <p class="assign-text">Denk dir eine Person für <strong id="wo-target"></strong> aus.</p>
+        <input id="wo-term" type="text" maxlength="40" placeholder="Name der Person" autocomplete="off" spellcheck="false">
+        <button id="wo-suggest" class="btn ghost" type="button">🎲 Vorschlag</button>
+        <button id="wo-submit" class="btn primary big" type="submit">Festlegen</button>
+        <p id="wo-assign-done" class="muted small center" hidden></p>
+      </form>
+      <div class="card">
+        <h2>Wer ist fertig?</h2>
+        <ul id="wo-assign-list" class="lobby-players"></ul>
+      </div>
+      <button id="wo-fill" class="btn ghost" type="button" hidden>Fehlende Personen zufällig vergeben (Host)</button>
+      <button class="btn ghost wo-leave" type="button">Lobby verlassen</button>
+    </section>
+
+    <section id="screen-wo-game" class="screen">
+      <header class="title">
+        <h1>🙋 Wer bin ich?</h1>
+        <p class="sub" id="wo-sub"></p>
+      </header>
+
+      <div id="wo-result" class="end-banner crew" hidden>
+        <span class="end-emoji">🏁</span>
+        <h1>Spiel vorbei!</h1>
+        <ol id="wo-ranking" class="ranking"></ol>
+        <div class="result-actions">
+          <button id="wo-again" class="btn primary big" type="button">Neue Runde</button>
+          <button id="wo-to-lobby" class="btn ghost" type="button">Zurück zur Lobby</button>
+          <p id="wo-wait-host" class="muted small center" hidden>Warte auf den Host für die nächste Runde …</p>
+        </div>
+      </div>
+
+      <!-- Aktuelle Frage: Abstimmung Ja / Nein / Enthaltung -->
+      <div id="wo-question" class="card question-card in-game" hidden>
+        <span class="role-label" id="wo-q-label"></span>
+        <p class="question-text" id="wo-q-text"></p>
+        <div id="wo-q-buttons" class="answer-buttons">
+          <button class="btn yes" type="button" data-answer="yes">👍 Ja</button>
+          <button class="btn no" type="button" data-answer="no">👎 Nein</button>
+          <button class="btn ghost" type="button" data-answer="abstain">Enthaltung</button>
+        </div>
+        <p class="muted small" id="wo-q-status"></p>
+        <div id="wo-q-host" class="host-row" hidden>
+          <button id="wo-q-resolve" class="btn ghost" type="button">Jetzt auswerten</button>
+        </div>
+      </div>
+
+      <div id="wo-cards" class="wbi-cards"></div>
+
+      <div class="card" id="wo-log-card" hidden>
+        <h2>Verlauf</h2>
+        <ul id="wo-log" class="log"></ul>
+      </div>
+
+      <button id="wo-skip" class="btn ghost in-game" type="button" hidden>Spieler überspringen (Host)</button>
+      <button id="wo-end" class="btn ghost in-game" type="button" hidden>Spiel beenden (Host)</button>
+      <button class="btn ghost wo-leave" type="button">Lobby verlassen</button>
+    </section>
+
     <!-- ============ ONLINE: BEITRETEN / ERSTELLEN ============ -->
     <section id="screen-online" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
       <header class="title">
         <h1>🌐 Online spielen</h1>
-        <p class="sub">Jeder auf seinem eigenen Gerät</p>
+        <p class="sub" id="online-sub">Jeder auf seinem eigenen Gerät</p>
       </header>
 
       <div class="card">
@@ -197,7 +363,7 @@
         <input id="on-name" type="text" maxlength="24" placeholder="Wie heißt du?" autocomplete="off" autocapitalize="words">
       </div>
 
-      <div class="card">
+      <div class="card" id="on-create-card">
         <h2>Neue Lobby</h2>
         <p class="muted small">Du bist der Host und stellst das Spiel ein. Die anderen treten mit dem Code bei.</p>
         <button id="on-create" class="btn primary" type="button">Lobby erstellen</button>
@@ -216,7 +382,7 @@
     <section id="screen-lobby" class="screen">
       <header class="title">
         <h1>Lobby</h1>
-        <p class="sub">Code zum Beitreten</p>
+        <p class="sub" id="lobby-game"></p>
       </header>
 
       <div class="card code-card">
@@ -233,17 +399,17 @@
         <ul id="lobby-players" class="lobby-players"></ul>
       </div>
 
-      <div class="card">
+      <div class="card" id="lobby-settings">
         <div class="row-between">
           <h2>Einstellungen</h2>
           <span class="pill" id="lobby-host-pill"></span>
         </div>
         <div class="row-between">
-          <span>Imposter</span>
+          <span>Verräter</span>
           <div class="stepper" id="lobby-imp-stepper">
-            <button type="button" data-dir="-1" aria-label="Weniger Imposter">−</button>
+            <button type="button" data-dir="-1" aria-label="Weniger Verräter">−</button>
             <span id="lobby-impostors">1</span>
-            <button type="button" data-dir="1" aria-label="Mehr Imposter">+</button>
+            <button type="button" data-dir="1" aria-label="Mehr Verräter">+</button>
           </div>
         </div>
         <span class="muted small">Kategorie</span>
@@ -252,7 +418,7 @@
         <div id="lobby-difficulties" class="chips"></div>
         <label class="toggle">
           <input type="checkbox" id="lobby-hint">
-          <span>Imposter sieht die Kategorie</span>
+          <span>Verräter sieht die Kategorie</span>
         </label>
       </div>
 
@@ -346,10 +512,13 @@
     </section>
   </main>
 
+  <!-- Kurze Hinweise -->
+  <div id="toast" class="toast" hidden></div>
+
   <!-- Verbindungsstatus (online) -->
   <div id="conn-banner" class="conn-banner" hidden>Verbindung unterbrochen – verbinde neu …</div>
 
-  <!-- Online: Imposter rät den Begriff -->
+  <!-- Online: Verräter rät den Begriff -->
   <div id="o-guess-panel" class="overlay" hidden>
     <form id="o-guess-form" class="overlay-box" autocomplete="off">
       <span class="hand">🕵️</span>
@@ -392,12 +561,12 @@
     </div>
   </div>
 
-  <!-- Imposter rät den Begriff -->
+  <!-- Verräter rät den Begriff -->
   <div id="guess-panel" class="overlay" hidden>
     <form id="form-guess" class="overlay-box" autocomplete="off">
       <span class="hand">🕵️</span>
       <h2>Begriff raten</h2>
-      <p class="muted small">Nur für Imposter. Richtig = gewonnen, falsch = verloren. Danach ist man so oder so raus – die anderen erfahren den Begriff nicht.</p>
+      <p class="muted small">Nur für Verräter. Richtig = gewonnen, falsch = verloren. Danach ist man so oder so raus – die anderen erfahren den Begriff nicht.</p>
       <select id="guess-name"></select>
       <div class="secret-input">
         <input id="guess-word" type="password" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -426,6 +595,8 @@
   <script src="words.js"></script>
   <script src="shared.js"></script>
   <script src="app.js"></script>
+  <script src="wbi.js"></script>
   <script src="online.js"></script>
+  <script src="wbi-online.js"></script>
 </body>
 </html>
