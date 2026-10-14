@@ -1,10 +1,11 @@
 # Partyspiele
 
-Drei Spiele:
+Vier Spiele:
 
 - **Verräter** – alle kennen einen geheimen Begriff, nur die Verräter nicht. Pass & Play oder online.
 - **Wer bin ich?** – jeder bekommt eine Person, die alle kennen außer ihm selbst. Pass & Play oder online.
 - **SPIEGEL** – Karten, Lügen und Fallen für genau 2 Spieler. Pass & Play oder online.
+- **Stadt Land Fluss** – ein Buchstabe, eigene Kategorien, Zeitdruck. Nur online, 1 bis 20 Spieler.
 
 Auf der Startseite wählt man das Spiel, danach den Modus:
 
@@ -84,6 +85,16 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 - **Spielende:** Jeder ungenutzte Lügenjoker kostet **−1**. Danach gewinnt, wer mehr Punkte hat. Der Endbildschirm zeigt groß den Punktestand und darunter das Rundenlog.
 - **Pass & Play:** Das Gerät wird vor jedem geheimen Zug übergeben (Falle stellen, Karte legen, Joker-Entscheidung). Das Aufdecken sehen beide.
 - Die Wertung steht in `spiegel-rules.js` und wird von Pass & Play und vom Server gemeinsam benutzt.
+
+## Stadt Land Fluss (nur online, 1–20 Spieler)
+
+- **Lobby:** Der Host legt die Kategorien fest (Vorgabe: Stadt, Land, Fluss, Name, Tier, Beruf – eigene lassen sich eintippen, bis zu 12), die Zeit pro Runde (ohne Timer oder 1–5 Minuten) und die Rundenzahl (1–20). Alle sehen die Einstellungen.
+- **Schreiben:** Jede Runde gibt es einen zufälligen Anfangsbuchstaben (ohne Q, X, Y). Jeder füllt auf seinem Gerät für jede Kategorie ein Feld aus. „Fertig“ geht erst, wenn jedes Feld mindestens 2 Zeichen hat. Wer fertig ist, kann noch einmal ändern, solange die Runde läuft.
+- Die Runde endet, wenn **alle fertig** sind oder der **Timer abläuft** – dann wird gewertet, was bis dahin eingetippt ist. Der Host kann die Runde auch vorzeitig beenden.
+- **Auswertung:** Unter jeder Kategorie stehen die Antworten aller Spieler. Jeder stimmt bei den Antworten der anderen mit **gültig** oder **ungültig** ab; ungültig ist eine Antwort, wenn mehr Stimmen dagegen als dafür sind.
+- Gleiche Antworten erkennt das Spiel automatisch – auch mit Groß-/Kleinschreibung, Umlauten und kleinen Tippfehlern. Der Host kann mit **Gleichsetzen** weitere Antworten als gleich werten oder mit **Trennen** eine automatische Zuordnung aufheben.
+- **Punkte:** als Einziger eine gültige Antwort in der Kategorie = **20**, eine Antwort, die kein anderer hat = **10**, gleiche Antwort wie ein anderer = **5**, ungültig oder leer = 0. Die Punkte werden schon während der Auswertung angezeigt.
+- Nach jeder Runde gibt es einen **Punktestand** mit Rundentabelle; nach der letzten Runde den Endstand.
 
 ## Kategorien (Verräter)
 

@@ -77,7 +77,8 @@ let currentMode = "local"; // "local" (Pass & Play) oder "online"
 const GAMES = {
   verraeter: { icon: "", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
   werbinich: { icon: "", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." },
-  luegen: { icon: "", name: "SPIEGEL", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit." }
+  luegen: { icon: "", name: "SPIEGEL", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit." },
+  slf: { icon: "", name: "Stadt Land Fluss", sub: "Ein Buchstabe, eigene Kategorien, Zeitdruck.", onlineOnly: true }
 };
 
 // Phasen-Anzeige je Spiel und Modus
@@ -87,7 +88,9 @@ const STEP_PLANS = {
   "werbinich-local": [["setup", "Start"], ["assign", "Personen"], ["show", "Zeigen"], ["game", "Spiel"]],
   "werbinich-online": [["setup", "Lobby"], ["assign", "Personen"], ["game", "Spiel"]],
   "luegen-local": [["setup", "Start"], ["trap", "Fallen"], ["game", "Duell"]],
-  "luegen-online": [["setup", "Lobby"], ["trap", "Fallen"], ["game", "Duell"]]
+  "luegen-online": [["setup", "Lobby"], ["trap", "Fallen"], ["game", "Duell"]],
+  "slf-local": [["setup", "Lobby"], ["write", "Schreiben"], ["review", "Auswertung"], ["scores", "Punkte"]],
+  "slf-online": [["setup", "Lobby"], ["write", "Schreiben"], ["review", "Auswertung"], ["scores", "Punkte"]]
 };
 
 function updateSteps(phase) {

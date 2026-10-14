@@ -11,14 +11,14 @@ const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const { CATEGORIES } = require("./words.js");
-const { shuffle, pick, normalize, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
+const { shuffle, pick, normalize, levenshtein, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 const { SpiegelRules } = require("./spiegel-rules.js");
 
 const PORT = process.env.PORT || 3000;
 const MIN_PLAYERS = 3; // Verräter
-const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2, luegen: 2 };
-const MAX_PLAYERS_BY_GAME = { verraeter: 20, werbinich: 20, luegen: 2 };
-const GAME_TYPES = ["verraeter", "werbinich", "luegen"];
+const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2, luegen: 2, slf: 1 };
+const MAX_PLAYERS_BY_GAME = { verraeter: 20, werbinich: 20, luegen: 2, slf: 20 };
+const GAME_TYPES = ["verraeter", "werbinich", "luegen", "slf"];
 const MAX_PLAYERS = 20;
 const LOBBY_IDLE_MS = 30 * 60 * 1000; // leere Lobbys werden nach 30 Min. gelöscht
 const DIFFICULTIES = ["leicht", "mittel", "schwer", "gemischt"];
@@ -38,7 +38,8 @@ const STATIC = {
   "/wbi-online.js": ["wbi-online.js", "text/javascript; charset=utf-8"],
   "/spiegel-rules.js": ["spiegel-rules.js", "text/javascript; charset=utf-8"],
   "/spiegel-online.js": ["spiegel-online.js", "text/javascript; charset=utf-8"],
-  "/spiegel-local.js": ["spiegel-local.js", "text/javascript; charset=utf-8"]
+  "/spiegel-local.js": ["spiegel-local.js", "text/javascript; charset=utf-8"],
+  "/slf-online.js": ["slf-online.js", "text/javascript; charset=utf-8"]
 };
 
 const server = http.createServer((req, res) => {
@@ -128,10 +129,15 @@ function viewFor(lobby, me) {
     minPlayers: MIN_PLAYERS_BY_GAME[lobby.gameType],
     maxPlayers: MAX_PLAYERS_BY_GAME[lobby.gameType],
     settings: lobby.settings,
+    slfSettings: lobby.slfSettings,
     players: lobby.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected })),
     game: null
   };
   if (!g) return view;
+  if (g.type === "slf") {
+    view.game = slfView(lobby, g, me);
+    return view;
+  }
   if (g.type === "luegen") {
     view.game = luView(lobby, g, me);
     return view;
@@ -346,6 +352,7 @@ function dropFromGame(lobby, id) {
   const g = lobby.game;
   if (g && g.type === "werbinich") return wbiDrop(lobby, id);
   if (g && g.type === "luegen") return luDrop(lobby, id);
+  if (g && g.type === "slf") return slfDrop(lobby, id);
   if (!g || g.phase === "over" || !g.order.includes(id) || g.out.has(id)) return;
   g.out.add(id);
   g.results[id] = "hat das Spiel verlassen";
@@ -414,6 +421,7 @@ const handlers = {
       hostId: null,
       players: [],
       settings: sanitizeSettings({ ...(msg.settings || {}) }, 1),
+      slfSettings: { ...SLF_DEFAULTS, categories: [...SLF_DEFAULTS.categories] },
       game: null,
       usedWords: [],
       emptySince: null
@@ -486,7 +494,8 @@ const handlers = {
     const min = MIN_PLAYERS_BY_GAME[lobby.gameType];
     if (lobby.players.length < min) fail(`Ihr braucht mindestens ${min} Spieler.`);
     if (lobby.players.length > MAX_PLAYERS_BY_GAME[lobby.gameType]) fail("Zu viele Spieler für dieses Spiel.");
-    if (lobby.gameType === "luegen") luStart(lobby);
+    if (lobby.gameType === "slf") slfStart(lobby);
+    else if (lobby.gameType === "luegen") luStart(lobby);
     else if (lobby.gameType === "werbinich") wbiStart(lobby);
     else startGame(lobby);
     return lobby;
@@ -1057,6 +1066,328 @@ Object.assign(handlers, {
       SpiegelRules.next(g.G); // nach der letzten Runde: Spielende mit −1 je ungenutztem Joker
       g.ready = new Set();
     }
+    return lobby;
+  }
+});
+
+/* =========================================================
+   Stadt Land Fluss – nur online, 1 bis 20 Spieler
+   - Der Host legt Kategorien, Timer und Rundenzahl in der Lobby fest.
+   - Jede Runde gibt es einen Anfangsbuchstaben. Jeder füllt für jede
+     Kategorie ein Feld aus und meldet sich fertig (jedes Feld braucht
+     mindestens 2 Zeichen). Die Runde endet, wenn alle fertig sind oder
+     der Timer abläuft.
+   - Auswertung: Jeder stimmt über die Antworten der anderen ab (gültig /
+     ungültig). Gleiche Antworten werden automatisch erkannt, auch mit
+     kleinen Tippfehlern; der Host kann Antworten gleichsetzen oder trennen.
+   - Punkte: als Einziger eine gültige Antwort in der Kategorie = 20,
+     eine Antwort, die kein anderer hat = 10, gleiche Antwort wie ein
+     anderer = 5, ungültig oder leer = 0.
+   ========================================================= */
+const SLF_DEFAULTS = { categories: ["Stadt", "Land", "Fluss", "Name", "Tier", "Beruf"], timer: 120, rounds: 5 };
+const SLF_TIMERS = [0, 60, 90, 120, 180, 240, 300]; // 0 = ohne Timer
+const SLF_LETTERS = "ABCDEFGHIJKLMNOPRSTUVWZ".split(""); // ohne Q, X, Y
+const SLF_MAX_CATEGORIES = 12;
+
+const slfClean = (t, max = 40) => String(t || "").trim().replace(/\s+/g, " ").slice(0, max);
+const slfFilled = (t) => slfClean(t).length >= 2; // leer oder nur ein Zeichen zählt nicht
+
+// Zwei Antworten gelten automatisch als gleich, wenn sie bis auf
+// Groß-/Kleinschreibung, Umlaute, Leerzeichen und kleine Tippfehler übereinstimmen.
+function slfSame(a, b) {
+  const x = normalize(a);
+  const y = normalize(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const len = Math.min(x.length, y.length);
+  const tol = len >= 8 ? 2 : len >= 4 ? 1 : 0;
+  return tol > 0 && levenshtein(x, y) <= tol;
+}
+
+function slfSanitizeSettings(input, current) {
+  const out = { ...current };
+  if (Array.isArray(input.categories)) {
+    const seen = new Set();
+    out.categories = input.categories
+      .map((c) => slfClean(c, 30))
+      .filter((c) => c && !seen.has(normalize(c)) && seen.add(normalize(c)))
+      .slice(0, SLF_MAX_CATEGORIES);
+    if (!out.categories.length) fail("Es muss mindestens eine Kategorie geben.");
+  }
+  if (input.timer !== undefined) {
+    const t = Number(input.timer);
+    if (!SLF_TIMERS.includes(t)) fail("Ungültiger Timer.");
+    out.timer = t;
+  }
+  if (input.rounds !== undefined) {
+    const r = Number(input.rounds);
+    if (!Number.isInteger(r) || r < 1 || r > 20) fail("Die Rundenzahl muss zwischen 1 und 20 liegen.");
+    out.rounds = r;
+  }
+  return out;
+}
+
+function slfStart(lobby) {
+  const st = lobby.slfSettings;
+  lobby.game = {
+    type: "slf",
+    phase: "write", // write → review → scores → (write …) → over
+    ids: lobby.players.map((p) => p.id),
+    names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
+    categories: [...st.categories],
+    timer: st.timer,
+    rounds: st.rounds,
+    round: 0,
+    usedLetters: [],
+    total: Object.fromEntries(lobby.players.map((p) => [p.id, 0])),
+    history: [] // pro Runde: { round, letter, points: {id: n} }
+  };
+  slfNewRound(lobby);
+}
+
+function slfNewRound(lobby) {
+  const g = lobby.game;
+  g.round++;
+  let free = SLF_LETTERS.filter((l) => !g.usedLetters.includes(l));
+  if (!free.length) free = SLF_LETTERS;
+  g.letter = pick(free);
+  g.usedLetters.push(g.letter);
+  g.phase = "write";
+  g.answers = Object.fromEntries(g.ids.map((id) => [id, g.categories.map(() => "")]));
+  g.done = new Set();
+  g.votes = {}; // "cat|spieler" → Map(abstimmender → true/false)
+  g.merges = g.categories.map(() => []); // manuelle Gleichsetzungen: Paare von Spieler-IDs
+  g.splits = g.categories.map(() => new Set()); // vom Host getrennte Antworten
+  g.roundPoints = null;
+  g.endsAt = g.timer ? Date.now() + g.timer * 1000 : null;
+  if (g.timer) {
+    const round = g.round;
+    setTimeout(() => {
+      // Nur auswerten, wenn diese Runde noch läuft
+      if (lobby.game !== g || g.phase !== "write" || g.round !== round || !lobbies.has(lobby.code)) return;
+      slfToReview(lobby, "Die Zeit ist um!");
+      broadcastState(lobby);
+    }, g.timer * 1000 + 300);
+  }
+}
+
+const slfActive = (lobby, g) => g.ids.filter((id) => lobby.players.some((p) => p.id === id));
+
+function slfToReview(lobby, reason) {
+  const g = lobby.game;
+  g.phase = "review";
+  g.endsAt = null;
+  // Zu kurze Antworten zählen als leer
+  for (const id of g.ids) g.answers[id] = g.answers[id].map((a) => (slfFilled(a) ? slfClean(a) : ""));
+  if (reason) broadcastEvent(lobby, { toast: true, text: `${reason} Auswertung beginnt.` });
+}
+
+// Gruppen gleicher Antworten je Kategorie (Union-Find)
+function slfGroups(g, cat) {
+  const ids = g.ids.filter((id) => g.answers[id][cat]);
+  const parent = Object.fromEntries(ids.map((id) => [id, id]));
+  const find = (x) => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+  const union = (a, b) => { parent[find(a)] = find(b); };
+  const split = g.splits[cat];
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = ids[i], b = ids[j];
+      if (split.has(a) || split.has(b)) continue;
+      if (slfSame(g.answers[a][cat], g.answers[b][cat])) union(a, b);
+    }
+  }
+  for (const [a, b] of g.merges[cat]) if (parent[a] && parent[b]) union(a, b);
+  return Object.fromEntries(ids.map((id) => [id, find(id)]));
+}
+
+function slfIsValid(g, cat, id) {
+  if (!g.answers[id][cat]) return false;
+  const v = g.votes[`${cat}|${id}`];
+  if (!v) return true;
+  let yes = 0, no = 0;
+  for (const ok of v.values()) ok ? yes++ : no++;
+  return no <= yes; // ungültig nur, wenn mehr Stimmen dagegen als dafür
+}
+
+// Punkte dieser Runde (auch als Vorschau während der Auswertung)
+function slfPoints(g) {
+  const pts = Object.fromEntries(g.ids.map((id) => [id, g.categories.map(() => 0)]));
+  g.categories.forEach((_, cat) => {
+    const groups = slfGroups(g, cat);
+    const valid = g.ids.filter((id) => slfIsValid(g, cat, id));
+    for (const id of valid) {
+      if (valid.length === 1) pts[id][cat] = 20;
+      else pts[id][cat] = valid.some((o) => o !== id && groups[o] === groups[id]) ? 5 : 10;
+    }
+  });
+  return pts;
+}
+
+function slfView(lobby, g, me) {
+  const inGame = g.ids.includes(me.id);
+  const view = {
+    type: "slf",
+    phase: g.phase,
+    inGame,
+    round: g.round,
+    rounds: g.rounds,
+    letter: g.letter,
+    categories: g.categories,
+    endsAt: g.endsAt,
+    now: Date.now(),
+    players: g.ids.map((id) => {
+      const p = lobby.players.find((x) => x.id === id);
+      return { id, name: g.names[id], connected: !!(p && p.connected), left: !p, done: g.done.has(id), total: g.total[id] };
+    }),
+    history: g.history
+  };
+
+  if (g.phase === "write") {
+    // Während des Schreibens sieht jeder nur seine eigenen Antworten
+    view.myAnswers = inGame ? g.answers[me.id] : null;
+    return view;
+  }
+
+  const pts = g.phase === "review" ? slfPoints(g) : g.roundPoints;
+  view.review = g.categories.map((name, cat) => {
+    const groups = slfGroups(g, cat);
+    return {
+      name,
+      answers: g.ids.map((id) => {
+        const v = g.votes[`${cat}|${id}`] || new Map();
+        let yes = 0, no = 0;
+        for (const ok of v.values()) ok ? yes++ : no++;
+        const text = g.answers[id][cat];
+        return {
+          id,
+          text,
+          group: text ? groups[id] : null,
+          split: g.splits[cat].has(id),
+          valid: slfIsValid(g, cat, id),
+          yes,
+          no,
+          myVote: v.has(me.id) ? v.get(me.id) : null,
+          points: pts ? pts[id][cat] : 0
+        };
+      })
+    };
+  });
+  view.roundPoints = pts ? Object.fromEntries(g.ids.map((id) => [id, pts[id].reduce((a, b) => a + b, 0)])) : null;
+  return view;
+}
+
+function slfDrop(lobby, id) {
+  const g = lobby.game;
+  if (g.phase === "over" || !g.ids.includes(id)) return;
+  // Antworten bleiben stehen; wer geht, muss nicht mehr fertig werden
+  if (g.phase === "write" && slfActive(lobby, g).filter((x) => x !== id).every((x) => g.done.has(x))) {
+    slfToReview(lobby);
+  }
+}
+
+function slfRequire(lobby, phase, me) {
+  const g = requireGame(lobby, phase, "slf");
+  if (!g.ids.includes(me.id)) fail("Du spielst in dieser Runde nicht mit.");
+  return g;
+}
+
+function slfCat(g, v) {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 0 || n >= g.categories.length) fail("Unbekannte Kategorie.");
+  return n;
+}
+
+Object.assign(handlers, {
+  slfSettings(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    if (lobby.game && lobby.game.phase !== "over") fail("Während des Spiels können die Einstellungen nicht geändert werden.");
+    lobby.slfSettings = slfSanitizeSettings(msg.settings || {}, lobby.slfSettings);
+    return lobby;
+  },
+
+  // Zwischenstand beim Tippen, damit beim Ablauf des Timers nichts verloren geht
+  slfDraft(ws, msg, lobby, me) {
+    const g = slfRequire(lobby, "write", me);
+    if (g.done.has(me.id) || !Array.isArray(msg.answers)) return null;
+    g.answers[me.id] = g.categories.map((_, i) => slfClean(msg.answers[i]));
+    return null; // keine Übertragung an alle nötig
+  },
+
+  slfDone(ws, msg, lobby, me) {
+    const g = slfRequire(lobby, "write", me);
+    const answers = g.categories.map((_, i) => slfClean((msg.answers || [])[i]));
+    if (!answers.every(slfFilled)) fail("Fülle jedes Feld mit mindestens 2 Zeichen aus.");
+    g.answers[me.id] = answers;
+    g.done.add(me.id);
+    if (slfActive(lobby, g).every((id) => g.done.has(id))) slfToReview(lobby, "Alle sind fertig.");
+    return lobby;
+  },
+
+  slfUndone(ws, msg, lobby, me) {
+    const g = slfRequire(lobby, "write", me);
+    g.done.delete(me.id);
+    return lobby;
+  },
+
+  // Host beendet das Schreiben vorzeitig
+  slfStop(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    requireGame(lobby, "write", "slf");
+    slfToReview(lobby, "Der Host hat die Runde beendet.");
+    return lobby;
+  },
+
+  slfVote(ws, msg, lobby, me) {
+    const g = slfRequire(lobby, "review", me);
+    const cat = slfCat(g, msg.cat);
+    if (!g.ids.includes(msg.id) || !g.answers[msg.id][cat]) fail("Diese Antwort gibt es nicht.");
+    if (msg.id === me.id) fail("Über deine eigene Antwort stimmst du nicht ab.");
+    const key = `${cat}|${msg.id}`;
+    const v = g.votes[key] || (g.votes[key] = new Map());
+    if (msg.valid === true || msg.valid === false) v.set(me.id, msg.valid);
+    else v.delete(me.id);
+    return lobby;
+  },
+
+  // Host setzt mehrere Antworten einer Kategorie gleich
+  slfMerge(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = requireGame(lobby, "review", "slf");
+    const cat = slfCat(g, msg.cat);
+    const ids = [...new Set(Array.isArray(msg.ids) ? msg.ids : [])].filter((id) => g.ids.includes(id) && g.answers[id][cat]);
+    if (ids.length < 2) fail("Wähle mindestens zwei Antworten aus.");
+    for (const id of ids) g.splits[cat].delete(id);
+    for (let i = 1; i < ids.length; i++) g.merges[cat].push([ids[0], ids[i]]);
+    return lobby;
+  },
+
+  // Host trennt eine Antwort wieder von den anderen
+  slfSplit(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = requireGame(lobby, "review", "slf");
+    const cat = slfCat(g, msg.cat);
+    if (!g.ids.includes(msg.id)) fail("Diese Antwort gibt es nicht.");
+    g.merges[cat] = g.merges[cat].filter(([a, b]) => a !== msg.id && b !== msg.id);
+    g.splits[cat].add(msg.id);
+    return lobby;
+  },
+
+  slfFinishReview(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = requireGame(lobby, "review", "slf");
+    const pts = slfPoints(g);
+    g.roundPoints = pts;
+    const sums = Object.fromEntries(g.ids.map((id) => [id, pts[id].reduce((a, b) => a + b, 0)]));
+    for (const id of g.ids) g.total[id] += sums[id];
+    g.history.push({ round: g.round, letter: g.letter, points: sums });
+    g.phase = g.round >= g.rounds ? "over" : "scores";
+    return lobby;
+  },
+
+  slfNext(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    requireGame(lobby, "scores", "slf");
+    slfNewRound(lobby);
     return lobby;
   }
 });

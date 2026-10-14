@@ -57,6 +57,14 @@
           <span class="mode-tag">Genau 2 Spieler</span>
         </span>
       </button>
+      <button class="mode-card game-card" type="button" data-game="slf">
+        <span class="mode-icon"></span>
+        <span class="mode-text">
+          <span class="mode-title">Stadt Land Fluss</span>
+          <span class="mode-desc">Ein Buchstabe, eigene Kategorien, Zeitdruck. Wer findet die Antworten, die sonst keiner hat?</span>
+          <span class="mode-tag">Nur online · 1–20 Spieler</span>
+        </span>
+      </button>
     </section>
 
     <!-- ============ MODUSWAHL ============ -->
@@ -511,6 +519,77 @@
       <button class="btn ghost lu-leave" type="button">Lobby verlassen</button>
     </section>
 
+
+    <!-- ============ STADT LAND FLUSS (NUR ONLINE) ============ -->
+    <section id="screen-slf-write" class="screen">
+      <header class="title">
+        <h1>Stadt Land Fluss</h1>
+        <p class="sub" id="slf-write-sub"></p>
+      </header>
+      <div class="slf-head card">
+        <div class="slf-letter-box">
+          <span class="role-label">Buchstabe</span>
+          <span class="slf-letter" id="slf-letter"></span>
+        </div>
+        <div class="slf-timer-box" id="slf-timer-box">
+          <span class="role-label">Zeit</span>
+          <span class="slf-timer" id="slf-timer"></span>
+        </div>
+      </div>
+      <form id="slf-form" class="card slf-form" autocomplete="off">
+        <div id="slf-fields" class="slf-fields"></div>
+        <p id="slf-hint" class="lu-hint"></p>
+        <button id="slf-done" class="btn primary big" type="submit">Fertig</button>
+        <button id="slf-edit" class="btn ghost" type="button" hidden>Doch noch ändern</button>
+      </form>
+      <div class="card">
+        <div class="row-between">
+          <h2>Wer ist fertig?</h2>
+          <span class="pill" id="slf-done-count"></span>
+        </div>
+        <ul id="slf-done-list" class="lobby-players"></ul>
+      </div>
+      <button id="slf-stop" class="btn ghost" type="button" hidden>Runde jetzt beenden (Host)</button>
+      <button class="btn ghost slf-leave" type="button">Lobby verlassen</button>
+    </section>
+
+    <section id="screen-slf-review" class="screen">
+      <header class="title">
+        <h1>Auswertung</h1>
+        <p class="sub" id="slf-review-sub"></p>
+      </header>
+      <div class="card">
+        <p class="small muted">Stimme bei den Antworten der anderen ab: <strong>gültig</strong> oder <strong>ungültig</strong>. Gleiche Antworten erkennt das Spiel auch mit kleinen Tippfehlern. Punkte: als Einziger in der Kategorie 20, Antwort hat sonst keiner 10, gleiche Antwort wie jemand anderes 5.</p>
+      </div>
+      <div id="slf-review-cats" class="slf-review-cats"></div>
+      <button id="slf-finish" class="btn primary big" type="button" hidden>Auswertung abschließen (Host)</button>
+      <p id="slf-review-wait" class="muted small center" hidden>Der Host schließt die Auswertung ab, wenn alle abgestimmt haben.</p>
+      <button class="btn ghost slf-leave" type="button">Lobby verlassen</button>
+    </section>
+
+    <section id="screen-slf-scores" class="screen">
+      <header class="title">
+        <h1 id="slf-scores-title">Punktestand</h1>
+        <p class="sub" id="slf-scores-sub"></p>
+      </header>
+      <div class="card">
+        <ol id="slf-ranking" class="slf-ranking"></ol>
+      </div>
+      <div class="card" id="slf-rounds-card">
+        <h2>Runden</h2>
+        <div class="table-wrap"><table class="lu-table" id="slf-table"></table></div>
+      </div>
+      <details class="card slf-last" id="slf-last">
+        <summary>Antworten der letzten Runde</summary>
+        <div id="slf-last-cats" class="slf-review-cats"></div>
+      </details>
+      <button id="slf-next" class="btn primary big" type="button" hidden>Nächste Runde</button>
+      <button id="slf-again" class="btn primary big" type="button" hidden>Neues Spiel</button>
+      <button id="slf-to-lobby" class="btn ghost" type="button" hidden>Zurück zur Lobby</button>
+      <p id="slf-scores-wait" class="muted small center" hidden>Warte auf den Host …</p>
+      <button class="btn ghost slf-leave" type="button">Lobby verlassen</button>
+    </section>
+
     <!-- ============ ONLINE: BEITRETEN / ERSTELLEN ============ -->
     <section id="screen-online" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
@@ -581,6 +660,29 @@
           <input type="checkbox" id="lobby-hint">
           <span>Verräter sieht die Kategorie</span>
         </label>
+      </div>
+
+      <div class="card" id="slf-settings" hidden>
+        <div class="row-between">
+          <h2>Einstellungen</h2>
+          <span class="pill" id="slf-host-pill"></span>
+        </div>
+        <span class="muted small">Kategorien</span>
+        <div id="slf-cats" class="chips"></div>
+        <form id="slf-cat-form" class="slf-cat-form" autocomplete="off">
+          <input id="slf-cat-input" type="text" maxlength="30" placeholder="Eigene Kategorie, z. B. Automarke" autocomplete="off">
+          <button class="btn" type="submit">Hinzufügen</button>
+        </form>
+        <span class="muted small">Zeit pro Runde</span>
+        <div id="slf-timers" class="chips"></div>
+        <div class="row-between">
+          <span>Runden</span>
+          <div class="stepper" id="slf-rounds-stepper">
+            <button type="button" data-dir="-1" aria-label="Weniger Runden">−</button>
+            <span id="slf-rounds">5</span>
+            <button type="button" data-dir="1" aria-label="Mehr Runden">+</button>
+          </div>
+        </div>
       </div>
 
       <button id="lobby-start" class="btn primary big" type="button">Spiel starten</button>
@@ -774,5 +876,6 @@
   <script src="spiegel-rules.js"></script>
   <script src="spiegel-online.js"></script>
   <script src="spiegel-local.js"></script>
+  <script src="slf-online.js"></script>
 </body>
 </html>

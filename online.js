@@ -175,7 +175,7 @@
     if (screen === "o-reveal") roleShown = false;
     if (screen === "o-game") myRoleShown = false;
     lastScreen = screen;
-    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game", "lu-setup": "trap", "lu-game": "game" }[screen];
+    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game", "lu-setup": "trap", "lu-game": "game", "slf-write": "write", "slf-review": "review", "slf-scores": "scores" }[screen];
     showScreen(screen, phase);
   }
 
@@ -185,7 +185,9 @@
     currentMode = "online";
     currentGame = state.gameType;
     const g = state.game;
-    if (g && g.inGame && g.type === "luegen") {
+    if (g && g.inGame && g.type === "slf") {
+      goto(SLFOnline.render(state));
+    } else if (g && g.inGame && g.type === "luegen") {
       goto(LUOnline.render(state));
     } else if (g && g.inGame && g.type === "werbinich") {
       goto(WBIOnline.render(state));
@@ -259,6 +261,8 @@
 
     $("lobby-game").textContent = `${GAMES[state.gameType].icon} ${GAMES[state.gameType].name} · Code zum Beitreten`;
     $("lobby-settings").hidden = state.gameType !== "verraeter";
+    $("slf-settings").hidden = state.gameType !== "slf";
+    if (state.gameType === "slf") SLFOnline.renderLobbySettings(state);
     const enough = state.players.length >= state.minPlayers;
     $("lobby-start").hidden = !host;
     $("lobby-start").disabled = !enough;
