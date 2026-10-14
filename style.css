@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #14111f;
   --bg-2: #1e1a2e;
   --card: #241f38;
@@ -582,3 +583,105 @@ button.term-box { cursor: pointer; }
 .lu-table td.num { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lu-rules summary { cursor: pointer; font-weight: 700; }
 .lu-rules ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
+
+/* SPIEGEL: Lügenjoker als einzelner Schalter */
+.lu-joker {
+  appearance: none; font: inherit; color: var(--text); width: 100%; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px; border-radius: 14px; text-align: left;
+  border: 1px dashed var(--impostor); background: var(--bg-2);
+}
+.lu-joker.on { border-style: solid; background: linear-gradient(160deg, #3b1218, var(--bg-2)); }
+.lu-joker:disabled { opacity: .45; cursor: default; }
+.lu-joker .sw { width: 46px; height: 28px; border-radius: 14px; background: var(--border); position: relative; flex-shrink: 0; transition: background .15s; }
+.lu-joker .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--text); transition: left .15s; }
+.lu-joker.on .sw { background: var(--impostor); }
+.lu-joker.on .sw::after { left: 21px; }
+
+/* SPIEGEL: großer Endstand */
+.lu-final { display: flex; align-items: flex-end; justify-content: center; gap: 14px; margin: 6px 0 4px; }
+.lu-final-side { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.lu-final-num { font-size: 4.2rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.lu-final-side.me .lu-final-num { color: var(--primary-2); }
+.lu-final-name { font-size: .9rem; color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lu-final-sep { font-size: 3rem; font-weight: 700; color: var(--muted); line-height: 1.1; }
+
+/* =========================================================
+   Spiegel-Design: kühles Tintenblau, silbriger Akzent, Spiegelung im Titel.
+   Liegt als letzte Schicht über allen Spielen.
+   ========================================================= */
+:root {
+  --bg: #0d1020;
+  --bg-2: #1e2440;
+  --card: #161b30;
+  --border: #2d3558;
+  --text: #dfe4f5;
+  --muted: #8a93b5;
+  --primary: #9fdcff;
+  --primary-2: #c9ecff;
+  --on-primary: #0b1426;
+  --glow: rgba(159, 220, 255, .22);
+  --danger: #ff6f80;
+  --success: #6fe0ab;
+  --impostor: #ff6f80;
+  --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --body: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+html, body {
+  background: radial-gradient(circle at 50% -10%, #1b2348 0%, var(--bg) 55%) fixed;
+  background-color: var(--bg);
+  font-family: var(--body);
+}
+h1, h2, .mode-title, .phase-title, .big-name, .turn-name, .role-word, .role-impostor,
+.show-term, .question-text, .word-reveal, .lu-points, .lu-final-num { font-family: var(--display); }
+.title h1 { font-weight: 800; letter-spacing: .03em; }
+.role-label, .phase-num { letter-spacing: .14em; }
+
+/* Spiegelung unter großen Titeln */
+.mirror { position: relative; }
+.mirror::after {
+  content: attr(data-text); display: block; transform: scaleY(-1);
+  margin-top: -.35em; opacity: .16; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 70%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 70%);
+}
+
+/* Akzentflächen bekommen dunkle Schrift */
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.chip.selected, .num-btn.selected,
+#lu-att-claim .btn.selected, .lu-choice .btn.selected { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.step.done .dot, .step.current .dot { color: var(--on-primary); }
+.step.current .dot { box-shadow: 0 0 0 5px var(--glow); }
+.profile.current .badge, .wbi-card.current .badge { background: var(--primary); color: var(--on-primary); }
+.profile.current .avatar { color: var(--on-primary); }
+.profile.current, .wbi-card.current, .lu-player.attacking { box-shadow: 0 0 0 3px var(--glow); }
+.mode-card:hover, .mode-card:focus-visible { border-color: var(--primary); }
+.btn:focus-visible, .chip:focus-visible, .num-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Flächen mit festen Farben aus dem alten Design */
+.phase-card { background: radial-gradient(circle at 50% 30%, #23305e 0%, var(--card) 70%); }
+.turn-card, .question-card { background: linear-gradient(160deg, #1f2a52, var(--card)); }
+.num-btn { font-family: var(--mono); }
+.num-btn.card-btn { background: linear-gradient(160deg, var(--bg-2), var(--card)); position: relative; overflow: hidden; }
+.mini-card, .lu-table td.num, .lobby-code { font-family: var(--mono); }
+
+
+/* Minimalistisch: leere Icon-Platzhalter ausblenden */
+.mode-icon:empty, .menu-logo:empty, .hand:empty, .phase-icon:empty, .end-emoji:empty, .modal-emoji:empty { display: none; }
+.menu-title { margin-top: 40px; }
+.eye { font-size: .85rem; color: var(--muted); font-weight: 600; }
+.secret-input input { padding-right: 76px; }
+
+/* Karten wie Spiegelglas: silbern mit Lichtkante */
+.lu-card {
+  background: linear-gradient(160deg, #f1f5ff, #b8c4e4); color: #0d1020;
+  font-family: var(--display); position: relative; overflow: hidden;
+}
+.lu-card::after, .num-btn.card-btn::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,.35) 50%, transparent 60%);
+}
+.num-btn.card-btn::after { background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,.07) 50%, transparent 60%); }
+.lu-card.back { background: repeating-linear-gradient(45deg, #1e2a55 0 8px, #27366b 8px 16px); color: var(--primary-2); }
+

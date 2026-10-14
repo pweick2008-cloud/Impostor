@@ -123,7 +123,7 @@
         } else if (!state) {
           showError(msg.message);
         } else {
-          showModal({ emoji: "⚠️", title: "Geht gerade nicht", text: msg.message });
+          showModal({ emoji: "", title: "Geht gerade nicht", text: msg.message });
         }
         break;
       case "event":
@@ -145,7 +145,7 @@
         setSession(null);
         state = null;
         openOnlineHome();
-        showModal({ emoji: "👋", title: "Lobby verlassen", text: msg.message });
+        showModal({ emoji: "", title: "Lobby verlassen", text: msg.message });
         break;
       case "left":
         break;
@@ -215,7 +215,7 @@
       li.innerHTML = `
         <span class="avatar">${escapeHtml(p.name.charAt(0).toUpperCase())}</span>
         <span class="profile-name">${escapeHtml(p.name)}${p.id === state.you ? " (Du)" : ""}</span>
-        ${p.id === state.hostId ? `<span class="badge host">👑 Host</span>` : ""}
+        ${p.id === state.hostId ? `<span class="badge host">Host</span>` : ""}
         ${p.connected ? "" : `<span class="badge">offline</span>`}`;
       if (host && p.id !== state.you) {
         const kick = document.createElement("button");
@@ -224,7 +224,7 @@
         kick.setAttribute("aria-label", `${p.name} entfernen`);
         kick.textContent = "✕";
         kick.addEventListener("click", async () => {
-          const ok = await showModal({ emoji: "👋", title: `${p.name} entfernen?`, text: "Der Spieler wird aus der Lobby geworfen.", ok: "Entfernen", cancel: "Abbrechen" });
+          const ok = await showModal({ emoji: "", title: `${p.name} entfernen?`, text: "Der Spieler wird aus der Lobby geworfen.", ok: "Entfernen", cancel: "Abbrechen" });
           if (ok) send({ type: "kick", playerId: p.id });
         });
         li.appendChild(kick);
@@ -241,7 +241,7 @@
     const cats = $("lobby-categories");
     cats.innerHTML = "";
     const catOptions = Object.entries(CATEGORIES).map(([id, c]) => ({ id, label: `${c.icon} ${c.name}` }));
-    catOptions.push({ id: "zufall", label: "🎲 Zufällig" });
+    catOptions.push({ id: "zufall", label: "Zufällig" });
     for (const opt of catOptions) {
       cats.appendChild(makeChip(opt.label, s.category === opt.id, host ? () => updateSettings({ category: opt.id }) : null));
     }
@@ -297,14 +297,14 @@
   function roleHtml(me, compact = false) {
     if (me.impostor) {
       return `
-        <span class="hand">🕵️</span>
+        <span class="hand"></span>
         <span class="role-label">Du bist</span>
         <span class="role-impostor">VERRÄTER</span>
         ${me.category ? `<span class="small muted">Kategorie: ${escapeHtml(me.category)}</span>` : ""}
         ${compact ? "" : `<span class="small muted">Lass dir nichts anmerken und finde den Begriff heraus!</span>`}`;
     }
     return `
-      <span class="hand">✅</span>
+      <span class="hand"></span>
       <span class="role-label">Dein Begriff</span>
       <span class="role-word">${escapeHtml(me.word)}</span>
       <span class="small muted">Kategorie: ${escapeHtml(me.category)}</span>`;
@@ -370,7 +370,7 @@
       const meWon = g.me.impostor ? r.winner === "impostor" : r.winner === "crew";
       banner.classList.remove("crew", "impostor");
       banner.classList.add(r.winner);
-      $("o-end-emoji").textContent = r.winner === "crew" ? "🎉" : "🕵️";
+      $("o-end-emoji").textContent = r.winner === "crew" ? "" : "";
       $("o-end-title").textContent = r.winner === "crew" ? "Die Spieler gewinnen!" : "Die Verräter gewinnen!";
       $("o-end-reason").textContent = `${r.reason} ${meWon ? "Du hast gewonnen!" : "Du hast verloren."}`;
       $("o-end-word").textContent = r.word;
@@ -392,9 +392,9 @@
     myrole.classList.toggle("impostor", myRoleShown && g.me.impostor);
     myrole.innerHTML = myRoleShown
       ? (g.me.impostor
-        ? `<span>🕵️ Du bist <strong>Verräter</strong>${g.me.category ? ` · ${escapeHtml(g.me.category)}` : ""}</span>`
-        : `<span>✅ Dein Begriff: <strong>${escapeHtml(g.me.word)}</strong></span>`) + `<span class="muted small">verdecken</span>`
-      : `<span>🔒 Deine Rolle</span><span class="muted small">antippen zum Anzeigen</span>`;
+        ? `<span>Du bist <strong>Verräter</strong>${g.me.category ? ` · ${escapeHtml(g.me.category)}` : ""}</span>`
+        : `<span>Dein Begriff: <strong>${escapeHtml(g.me.word)}</strong></span>`) + `<span class="muted small">verdecken</span>`
+      : `<span>Deine Rolle</span><span class="muted small">antippen zum Anzeigen</span>`;
 
     // Wer ist dran?
     const vote = g.vote;
@@ -509,7 +509,7 @@
     b.textContent = label;
     b.addEventListener("click", async () => {
       const ok = await showModal({
-        emoji: "🗳️",
+        emoji: "",
         title: target ? `Für ${label} stimmen?` : "Enthalten?",
         text: "Deine Stimme kann danach nicht mehr geändert werden.",
         ok: "Ja",
@@ -521,14 +521,14 @@
   }
 
   async function confirmHost(title, text, type) {
-    const ok = await showModal({ emoji: "👑", title, text, ok: "Ja", cancel: "Abbrechen" });
+    const ok = await showModal({ emoji: "", title, text, ok: "Ja", cancel: "Abbrechen" });
     if (ok) send({ type });
   }
 
   async function leaveLobby() {
     const inGame = state && state.game && state.game.phase !== "over" && state.game.inGame;
     const ok = await showModal({
-      emoji: "🚪",
+      emoji: "",
       title: "Lobby verlassen?",
       text: inGame ? "Du scheidest aus dem laufenden Spiel aus." : "Du kannst mit dem Code wieder beitreten.",
       ok: "Verlassen",
@@ -627,7 +627,7 @@
       e.preventDefault();
       const word = $("o-guess-word").value.trim();
       if (!word) return;
-      const ok = await showModal({ emoji: "🕵️", title: `„${word}“ raten?`, text: "Danach bist du in jedem Fall ausgeschieden.", ok: "Raten", cancel: "Abbrechen" });
+      const ok = await showModal({ emoji: "", title: `„${word}“ raten?`, text: "Danach bist du in jedem Fall ausgeschieden.", ok: "Raten", cancel: "Abbrechen" });
       if (!ok) return;
       $("o-guess-panel").hidden = true;
       $("o-guess-word").value = "";

@@ -75,9 +75,9 @@ let currentGame = "verraeter"; // "verraeter" oder "werbinich"
 let currentMode = "local"; // "local" (Pass & Play) oder "online"
 
 const GAMES = {
-  verraeter: { icon: "🕵️", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
-  werbinich: { icon: "🙋", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." },
-  luegen: { icon: "🃏", name: "Lügenduell", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit.", onlineOnly: true }
+  verraeter: { icon: "", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
+  werbinich: { icon: "", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." },
+  luegen: { icon: "", name: "SPIEGEL", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit." }
 };
 
 // Phasen-Anzeige je Spiel und Modus
@@ -86,7 +86,7 @@ const STEP_PLANS = {
   "verraeter-online": [["setup", "Lobby"], ["reveal", "Rollen"], ["game", "Spiel"]],
   "werbinich-local": [["setup", "Start"], ["assign", "Personen"], ["show", "Zeigen"], ["game", "Spiel"]],
   "werbinich-online": [["setup", "Lobby"], ["assign", "Personen"], ["game", "Spiel"]],
-  "luegen-local": [["setup", "Lobby"], ["trap", "Fallen"], ["game", "Duell"]],
+  "luegen-local": [["setup", "Start"], ["trap", "Fallen"], ["game", "Duell"]],
   "luegen-online": [["setup", "Lobby"], ["trap", "Fallen"], ["game", "Duell"]]
 };
 
@@ -118,6 +118,7 @@ function openGameMenu(gameId) {
   const g = GAMES[gameId];
   $("menu-logo").textContent = g.icon;
   $("menu-title").textContent = g.name;
+  $("menu-title").dataset.text = g.name;
   $("menu-sub").textContent = g.sub;
   $("menu-online-note").hidden = true;
   $("menu-local").hidden = !!g.onlineOnly;
@@ -246,7 +247,7 @@ function renderSetup() {
   const cats = $("category-list");
   cats.innerHTML = "";
   const catOptions = Object.entries(CATEGORIES).map(([id, c]) => ({ id, label: `${c.icon} ${c.name}` }));
-  catOptions.push({ id: "zufall", label: "🎲 Zufällig" });
+  catOptions.push({ id: "zufall", label: "Zufällig" });
   for (const opt of catOptions) {
     cats.appendChild(makeChip(opt.label, settings.category === opt.id, () => {
       settings.category = opt.id;
@@ -339,7 +340,7 @@ function startGame() {
 
   showPhase({
     num: 2,
-    icon: "🎭",
+    icon: "",
     title: "Rollen verteilen",
     text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${settings.impostors} Verräter.`,
     button: "Los geht's",
@@ -373,7 +374,7 @@ function renderReveal() {
   if (p.impostor) {
     card.classList.add("impostor");
     back.innerHTML = `
-      <span class="hand">🕵️</span>
+      <span class="hand"></span>
       <span class="role-label">${escapeHtml(p.name)}, du bist</span>
       <span class="role-impostor">VERRÄTER</span>
       ${settings.hint ? `<span class="small muted">Kategorie: ${escapeHtml(game.category.icon + " " + game.category.name)}</span>` : ""}
@@ -382,7 +383,7 @@ function renderReveal() {
   } else {
     card.classList.add("crew");
     back.innerHTML = `
-      <span class="hand">✅</span>
+      <span class="hand"></span>
       <span class="role-label">${escapeHtml(p.name)}, dein Begriff</span>
       <span class="role-word">${escapeHtml(game.word)}</span>
       <span class="small muted">Kategorie: ${escapeHtml(game.category.icon + " " + game.category.name)}</span>
@@ -460,7 +461,7 @@ async function startDiscussion() {
   renderGame();
   await showPhase({
     num: 3,
-    icon: "🗣️",
+    icon: "",
     title: "Spielrunde",
     text: `Alle Rollen sind verteilt!\nReihum gibt jeder einen Tipp zum Begriff ab – ohne ihn zu verraten.\nNach jeder vollen Runde könnt ihr einen Vote starten.\n\n${starter.name} beginnt.`,
     button: "Los geht's",
@@ -658,17 +659,17 @@ function finishVote() {
   }
 
   if (!eliminated) {
-    $("vote-result-emoji").textContent = "🤷";
+    $("vote-result-emoji").textContent = "";
     $("vote-result-title").textContent = "Niemand scheidet aus";
     $("vote-result-text").textContent = top === 0
       ? "Alle haben sich enthalten."
       : leaders.length > 1 ? "Gleichstand – keine Entscheidung." : "Die Enthaltungen überwiegen.";
   } else if (eliminated.impostor) {
-    $("vote-result-emoji").textContent = "🎯";
+    $("vote-result-emoji").textContent = "";
     $("vote-result-title").textContent = `${eliminated.name} war ein Verräter!`;
     $("vote-result-text").textContent = `${eliminated.name} ist raus.`;
   } else {
-    $("vote-result-emoji").textContent = "😱";
+    $("vote-result-emoji").textContent = "";
     $("vote-result-title").textContent = `${eliminated.name} war unschuldig!`;
     $("vote-result-text").textContent = `${eliminated.name} war kein Verräter.`;
   }
@@ -737,14 +738,14 @@ async function onGuess(e) {
   const guess = $("guess-word").value.trim();
 
   if (!key || !guess) {
-    await showModal({ emoji: "✍️", title: "Fehlende Angaben", text: "Bitte wähle deinen Namen und gib den Begriff ein." });
+    await showModal({ emoji: "", title: "Fehlende Angaben", text: "Bitte wähle deinen Namen und gib den Begriff ein." });
     return;
   }
   const p = game.players.find((x) => x.key === key && !x.out);
   if (!p) return;
   if (!p.impostor) {
     $("guess-word").value = "";
-    await showModal({ emoji: "🚫", title: "Nicht erlaubt", text: "Nur Verräter dürfen den Begriff raten." });
+    await showModal({ emoji: "", title: "Nicht erlaubt", text: "Nur Verräter dürfen den Begriff raten." });
     return;
   }
 
@@ -753,7 +754,7 @@ async function onGuess(e) {
   const correct = isCorrectGuess(guess, game.entry, !!game.category.person);
   const wasLast = activeImpostors().length === 1;
   p.out = true;
-  p.result = correct ? "hat den Begriff erraten 🏆" : "hat falsch geraten";
+  p.result = correct ? "hat den Begriff erraten " : "hat falsch geraten";
 
   if (wasLast) {
     // Einziger (verbleibender) Verräter: entscheidet das ganze Spiel
@@ -767,7 +768,7 @@ async function onGuess(e) {
   fixTurn();
   renderGame();
   await showModal({
-    emoji: correct ? "🏆" : "💥",
+    emoji: correct ? "" : "",
     title: correct ? `${p.name} hat richtig geraten!` : `${p.name} lag falsch!`,
     text: (correct ? `${p.name} gewinnt persönlich` : `${p.name} hat verloren`) +
       ` und ist ausgeschieden.\nDer Begriff bleibt geheim – es sind noch ${activeImpostors().length} Verräter im Spiel.`
@@ -780,7 +781,7 @@ function endGame(winner, reason) {
   const banner = $("result");
   banner.classList.remove("crew", "impostor");
   banner.classList.add(winner);
-  $("end-emoji").textContent = winner === "crew" ? "🎉" : "🕵️";
+  $("end-emoji").textContent = winner === "crew" ? "" : "";
   $("end-title").textContent = winner === "crew" ? "Die Spieler gewinnen!" : "Die Verräter gewinnen!";
   $("end-reason").textContent = reason;
   $("end-word").textContent = game.word;
@@ -794,7 +795,7 @@ function endGame(winner, reason) {
 
 async function abortGame() {
   const ok = await showModal({
-    emoji: "⚠️",
+    emoji: "",
     title: "Spiel abbrechen?",
     text: "Die aktuelle Runde geht verloren.",
     ok: "Abbrechen",
@@ -822,6 +823,10 @@ document.addEventListener("DOMContentLoaded", () => {
     currentMode = "local";
     if (currentGame === "werbinich") {
       WBI.openSetup();
+      return;
+    }
+    if (currentGame === "luegen") {
+      LocalSpiegel.openSetup();
       return;
     }
     renderSetup();

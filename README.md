@@ -1,15 +1,15 @@
-# 🎲 Partyspiele
+# Partyspiele
 
 Drei Spiele:
 
-- **🕵️ Verräter** – alle kennen einen geheimen Begriff, nur die Verräter nicht. Pass & Play oder online.
-- **🙋 Wer bin ich?** – jeder bekommt eine Person, die alle kennen außer ihm selbst. Pass & Play oder online.
-- **🃏 Lügenduell** – Karten, Lügen und Fallen. Nur online, genau 2 Spieler.
+- **Verräter** – alle kennen einen geheimen Begriff, nur die Verräter nicht. Pass & Play oder online.
+- **Wer bin ich?** – jeder bekommt eine Person, die alle kennen außer ihm selbst. Pass & Play oder online.
+- **SPIEGEL** – Karten, Lügen und Fallen für genau 2 Spieler. Pass & Play oder online.
 
 Auf der Startseite wählt man das Spiel, danach den Modus:
 
-- **📱 Pass & Play** – ein Gerät für alle, wird reihum weitergegeben. Funktioniert auch offline: einfach `index.html` im Browser öffnen.
-- **🌐 Online** – jeder spielt auf seinem eigenen Gerät in einer gemeinsamen Lobby. Dafür muss der kleine Server (`server.js`) laufen, siehe unten.
+- **Pass & Play** – ein Gerät für alle, wird reihum weitergegeben. Funktioniert auch offline: einfach `index.html` im Browser öffnen.
+- **Online** – jeder spielt auf seinem eigenen Gerät in einer gemeinsamen Lobby. Dafür muss der kleine Server (`server.js`) laufen, siehe unten.
 
 ## Ablauf
 Das Spiel läuft in drei Phasen (oben als Fortschrittsanzeige sichtbar). Zwischen den Phasen erscheint jeweils ein animierter Übergangsbildschirm.
@@ -54,11 +54,11 @@ Dann `http://localhost:3000` öffnen. Andere Geräte im selben WLAN erreichen da
 
 Hinweis: Der kostenlose Plan schläft nach 15 Minuten ohne Besucher ein. Der erste Aufruf danach dauert bis zu einer Minute.
 
-## 🙋 Wer bin ich?
+## Wer bin ich?
 
 **Pass & Play**
 1. Spieler eintragen (ab 2 Spielern).
-2. **Personen ausdenken:** Reihum bekommt ein Spieler das Gerät und denkt sich eine Person für einen anderen Spieler aus (der darf nicht hinschauen). Mit „🎲 Vorschlag“ gibt es eine zufällige Person.
+2. **Personen ausdenken:** Reihum bekommt ein Spieler das Gerät und denkt sich eine Person für einen anderen Spieler aus (der darf nicht hinschauen). Mit „Vorschlag“ gibt es eine zufällige Person aus den Kategorien Musiker, Schauspieler, Politiker, Geschichte und Streamer.
 3. **Personen zeigen:** Reihum hält jeder das Gerät mit dem Bildschirm zu den anderen und tippt blind auf das Feld – alle sehen seine Person, nur er nicht. Nochmal tippen verdeckt sie wieder.
 4. **Spielrunde:** Für jeden Spieler gibt es ein Feld. Wer dran ist, stellt laut Ja/Nein-Fragen. Bei „Ja“ darf er weiterfragen, bei „Nein“ tippt er auf „Nächster“. Im Textfeld kann er seine Person raten: richtig = geschafft (mit Platzierung), falsch = der Nächste ist dran. Hat jemand eine Person vergessen, tippt man auf das Feld des Spielers.
 
@@ -70,19 +70,25 @@ Hinweis: Der kostenlose Plan schläft nach 15 Minuten ohne Besucher ein. Der ers
 
 Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine Rolle; bei Personen reicht auch der Nachname. Das Spiel endet, wenn höchstens noch ein Spieler seine Person nicht erraten hat.
 
-## 🃏 Lügenduell (nur online, 2 Spieler)
+## SPIEGEL (2 Spieler)
 
-- Jeder hat die Karten **1–9**, einen **Fallenjoker** und **2 Lügnerjoker**. Jede Karte kann nur einmal gelegt werden – eine Karte bleibt am Ende übrig.
-- **Vor dem Spiel** stellt jeder eine **Falle**: eine Karte des Gegners und eine Rundenspanne von höchstens 3 Runden (z. B. Karte 4 in Runde 5–7). Spielt der Gegner die Karte in der Spanne, gibt es Punkte: 3 Runden = 3, 2 Runden = 6, 1 Runde = 9.
+- Jeder hat die Karten **1–9**, einen **Fallenjoker** und **2 Lügenjoker**. Jede Karte kann nur einmal gelegt werden – eine Karte bleibt am Ende übrig.
+- **Vor dem Spiel** stellt jeder eine **Falle**: eine Karte des Gegners und eine Rundenspanne von höchstens 3 Runden. Spielt der Gegner die Karte in der Spanne, gibt es Punkte: 3 Runden = 3, 2 Runden = 6, 1 Runde = 9.
 - Es gibt **8 Runden**, die Rollen wechseln jede Runde.
-- Wer zuerst legt, wählt verdeckt eine Karte und nennt **3 Zahlen** („meine Karte ist eine davon“). Dazu legt er fest, ob das **wahr oder gelogen** ist. Das Spiel prüft, ob Karte und Wahrheit/Lüge zusammenpassen.
-- Der andere **glaubt** ihm oder **nicht** – und kann dabei einen **Lügnerjoker** setzen. Danach legt er seine Karte, beide Karten werden aufgedeckt.
-- **Auswertung:** Differenz ≥ 2 → die höhere Karte gewinnt ihren Wert. Differenz 1 → die niedrigere Karte gewinnt die Summe beider Karten. Gleiche Karten → keine Punkte.
-- **Lügnerjoker** richtig → +2 Punkte, der Lügner verliert seine Punkte dieser Runde. Falsch → trotzdem +1 Punkt, der andere behält seine Punkte.
-- Eine **unentdeckte Lüge** bringt +2 Punkte – aber nur, solange der Gegner noch Lügnerjoker hat.
-- Wer nach 8 Runden die meisten Punkte hat, gewinnt.
+- Wer zuerst legt, wählt verdeckt eine Karte und nennt **3 Zahlen** („meine Karte ist eine davon“). Ist die Karte nicht dabei, ist es eine **Lüge** – das erkennt das Spiel automatisch.
+- Der andere kann den **Lügenjoker** einschalten und legt dann seine Karte. Beide Karten werden aufgedeckt.
+- **Karten:** Differenz ≥ 2 → die höhere Karte gewinnt ihren Wert. Differenz 1 → die niedrigere Karte gewinnt die Summe beider Karten. Gleiche Karten → keine Punkte.
+- **Lügenjoker richtig:** Der Lügner bekommt in dieser Runde **0 Punkte** (auch keine Fallenpunkte), der Entlarver **+2**.
+- **Lügenjoker falsch:** **−2** für den, der ihn eingesetzt hat.
+- **Unentdeckte Lüge:** **+2**, solange der Gegner noch Lügenjoker hat.
+- **Spielende:** Jeder ungenutzte Lügenjoker kostet **−1**. Danach gewinnt, wer mehr Punkte hat. Der Endbildschirm zeigt groß den Punktestand und darunter das Rundenlog.
+- **Pass & Play:** Das Gerät wird vor jedem geheimen Zug übergeben (Falle stellen, Karte legen, Joker-Entscheidung). Das Aufdecken sehen beide.
+- Die Wertung steht in `spiegel-rules.js` und wird von Pass & Play und vom Server gemeinsam benutzt.
 
 ## Kategorien (Verräter)
-Länder · Historische Persönlichkeiten · Promis · Deutsche Streamer · Obst & Gemüse (oder zufällig) – jeweils in **leicht**, **mittel**, **schwer** oder **gemischt**.
 
-Eigene Begriffe lassen sich in `words.js` ergänzen.
+20 Kategorien mit insgesamt 1.460 Begriffen, jeweils **leicht**, **mittel** und **schwer** (oder gemischt bzw. zufällige Kategorie):
+
+Länder · Städte · Automarken · Historische Persönlichkeiten · Politiker · Schauspieler · Musiker & Bands · Deutsche Streamer · Obst & Gemüse · Tiere · Fußballer · Sportler (ohne Fußball) · Sehenswürdigkeiten · Berufe · Modemarken · Lebensmittelmarken · Techmarken · Firmen · Filme & Serien · Animes
+
+Eigene Begriffe lassen sich in `words.js` ergänzen – Browser und Server benutzen dieselbe Datei.

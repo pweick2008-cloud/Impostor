@@ -98,7 +98,7 @@ const WBIOnline = (() => {
         const input = e.target.querySelector("input");
         const text = input.value.trim();
         if (!text) { input.focus(); return; }
-        const ok = await showModal({ emoji: "🙋", title: `Bist du „${text}“?`, text: "Ist es falsch, ist der Nächste dran.", ok: "Raten", cancel: "Abbrechen" });
+        const ok = await showModal({ emoji: "", title: `Bist du „${text}“?`, text: "Ist es falsch, ist der Nächste dran.", ok: "Raten", cancel: "Abbrechen" });
         if (!ok) return;
         Online.send({ type: "wbiGuess", text });
         input.value = "";
@@ -152,7 +152,7 @@ const WBIOnline = (() => {
       c.el.className = "wbi-card" + (current ? " current" : "") + (p.rank ? " solved" : "") + (p.left ? " out" : "") + (isMe ? " me" : "");
 
       let badge = "";
-      if (p.rank) badge = `<span class="badge win">🏆 Platz ${p.rank}</span>`;
+      if (p.rank) badge = `<span class="badge win">Platz ${p.rank}</span>`;
       else if (p.left) badge = `<span class="badge">verlassen</span>`;
       else if (current) badge = `<span class="badge">Am Zug</span>`;
       c.head.innerHTML = `
@@ -167,7 +167,7 @@ const WBIOnline = (() => {
         c.term.innerHTML = `<span class="term">${escapeHtml(p.term)}</span>${p.termBy ? `<span class="muted small">ausgedacht von ${escapeHtml(p.termBy)}</span>` : ""}`;
       } else {
         c.term.className = "term-box secret";
-        c.term.innerHTML = `<span class="term">❓ ???</span><span class="muted small">Deine Person ist geheim</span>`;
+        c.term.innerHTML = `<span class="term">???</span><span class="muted small">Deine Person ist geheim</span>`;
       }
 
       c.history.innerHTML = p.history.map((h) =>

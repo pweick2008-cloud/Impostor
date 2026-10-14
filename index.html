@@ -3,11 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#14111f">
   <title>Partyspiele</title>
+  <meta name="theme-color" content="#0d1020">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+
   <main id="app">
 
     <!-- Phasen-Anzeige -->
@@ -27,30 +31,30 @@
     <!-- ============ SPIELAUSWAHL ============ -->
     <section id="screen-hub" class="screen active">
       <header class="title menu-title">
-        <span class="menu-logo">🎲</span>
-        <h1>Partyspiele</h1>
+        <span class="menu-logo"></span>
+        <h1 class="mirror" data-text="Partyspiele">Partyspiele</h1>
         <p class="sub">Wählt euer Spiel</p>
       </header>
       <button class="mode-card game-card" type="button" data-game="verraeter">
-        <span class="mode-icon">🕵️</span>
+        <span class="mode-icon"></span>
         <span class="mode-text">
           <span class="mode-title">Verräter</span>
           <span class="mode-desc">Alle kennen den Begriff – nur der Verräter nicht. Findet ihn, bevor er den Begriff errät.</span>
         </span>
       </button>
       <button class="mode-card game-card" type="button" data-game="werbinich">
-        <span class="mode-icon">🙋</span>
+        <span class="mode-icon"></span>
         <span class="mode-text">
           <span class="mode-title">Wer bin ich?</span>
           <span class="mode-desc">Jeder bekommt eine Person, die alle kennen außer ihm selbst. Findet mit Ja/Nein-Fragen heraus, wer ihr seid.</span>
         </span>
       </button>
       <button class="mode-card game-card" type="button" data-game="luegen">
-        <span class="mode-icon">🃏</span>
+        <span class="mode-icon"></span>
         <span class="mode-text">
-          <span class="mode-title">Lügenduell</span>
+          <span class="mode-title">SPIEGEL</span>
           <span class="mode-desc">Karten 1–9, Lügen und Fallen. Durchschau deinen Gegner in 8 Runden.</span>
-          <span class="mode-tag">Nur online · genau 2 Spieler</span>
+          <span class="mode-tag">Genau 2 Spieler</span>
         </span>
       </button>
     </section>
@@ -59,20 +63,20 @@
     <section id="screen-menu" class="screen">
       <button class="back-link" type="button" data-back="hub">← Spiele</button>
       <header class="title menu-title">
-        <span class="menu-logo" id="menu-logo">🕵️</span>
-        <h1 id="menu-title">Verräter</h1>
+        <span class="menu-logo" id="menu-logo"></span>
+        <h1 id="menu-title" class="mirror" data-text="Verräter">Verräter</h1>
         <p class="sub" id="menu-sub">Einer kennt den Begriff nicht. Findet ihn!</p>
       </header>
       <p id="menu-only-online" class="muted small center" hidden>Dieses Spiel gibt es nur online – für genau 2 Spieler.</p>
       <button id="menu-local" class="mode-card" type="button">
-        <span class="mode-icon">📱</span>
+        <span class="mode-icon"></span>
         <span class="mode-text">
           <span class="mode-title">Pass &amp; Play</span>
           <span class="mode-desc">Ein Gerät für alle – wird reihum weitergegeben.</span>
         </span>
       </button>
       <button id="menu-online" class="mode-card" type="button">
-        <span class="mode-icon">🌐</span>
+        <span class="mode-icon"></span>
         <span class="mode-text">
           <span class="mode-title">Online</span>
           <span class="mode-desc">Jeder spielt auf seinem eigenen Gerät in einer gemeinsamen Lobby.</span>
@@ -85,7 +89,7 @@
     <section id="screen-setup" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
       <header class="title">
-        <h1>📱 Pass &amp; Play</h1>
+        <h1>Pass &amp; Play</h1>
         <p class="sub">Ein Gerät · Alle Spieler · Ein Geheimnis</p>
       </header>
 
@@ -139,7 +143,7 @@
       <div class="reveal-stage">
       <button id="reveal-card" class="reveal-card" type="button">
         <div id="reveal-front" class="reveal-face">
-          <span class="hand">📱</span>
+          <span class="hand"></span>
           <span class="small">Gib das Gerät an</span>
           <span id="reveal-name" class="big-name"></span>
           <span class="small muted">Tippe auf deinen Namen, um deine Rolle zu sehen</span>
@@ -153,7 +157,7 @@
     <!-- ============ SPIEL: TIPPS, VOTES & ERGEBNIS ============ -->
     <section id="screen-game" class="screen">
       <header class="title">
-        <h1>🗣️ Spielrunde</h1>
+        <h1>Spielrunde</h1>
         <p class="sub" id="game-sub"></p>
       </header>
 
@@ -200,7 +204,7 @@
         <div id="profiles" class="profiles"></div>
       </div>
 
-      <button id="btn-guess" class="btn imp in-game" type="button">🕵️ Verräter: Begriff raten</button>
+      <button id="btn-guess" class="btn imp in-game" type="button">Verräter: Begriff raten</button>
 
       <div class="card" id="log-card" hidden>
         <h2>Verlauf</h2>
@@ -215,7 +219,7 @@
     <section id="screen-wbi-setup" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
       <header class="title">
-        <h1>🙋 Wer bin ich?</h1>
+        <h1>Wer bin ich?</h1>
         <p class="sub">Pass &amp; Play · Ein Gerät für alle</p>
       </header>
       <div class="card">
@@ -245,12 +249,12 @@
     <section id="screen-wbi-assign" class="screen">
       <p class="progress" id="wbi-assign-progress"></p>
       <form id="wbi-assign-form" class="card assign-card" autocomplete="off">
-        <span class="hand">✍️</span>
+        <span class="hand"></span>
         <span class="small">Gib das Gerät an</span>
         <span class="big-name" id="wbi-writer"></span>
         <p class="assign-text">Denk dir eine Person für <strong id="wbi-target"></strong> aus.<br><span class="muted small" id="wbi-target-warn"></span></p>
         <input id="wbi-term" type="text" maxlength="40" placeholder="Name der Person" autocomplete="off" spellcheck="false">
-        <button id="wbi-suggest" class="btn ghost" type="button">🎲 Vorschlag</button>
+        <button id="wbi-suggest" class="btn ghost" type="button">Vorschlag</button>
         <button class="btn primary big" type="submit">Weiter</button>
       </form>
     </section>
@@ -260,7 +264,7 @@
       <div class="reveal-stage">
         <button id="wbi-show-card" class="reveal-card show-card" type="button">
           <div id="wbi-show-front" class="reveal-face">
-            <span class="hand">🔄</span>
+            <span class="hand"></span>
             <span class="big-name" id="wbi-show-name"></span>
             <span class="small muted">Dreh das Gerät um, sodass die anderen den Bildschirm sehen.<br>Tippe dann <strong>ohne hinzuschauen</strong> auf das Feld.</span>
           </div>
@@ -275,12 +279,12 @@
 
     <section id="screen-wbi-game" class="screen">
       <header class="title">
-        <h1>🙋 Wer bin ich?</h1>
+        <h1>Wer bin ich?</h1>
         <p class="sub" id="wbi-sub"></p>
       </header>
 
       <div id="wbi-result" class="end-banner crew" hidden>
-        <span class="end-emoji">🏁</span>
+        <span class="end-emoji"></span>
         <h1>Spiel vorbei!</h1>
         <ol id="wbi-ranking" class="ranking"></ol>
         <div class="result-actions">
@@ -297,13 +301,13 @@
     <!-- ============ WER BIN ICH? – ONLINE ============ -->
     <section id="screen-wo-assign" class="screen">
       <header class="title">
-        <h1>✍️ Personen ausdenken</h1>
+        <h1>Personen ausdenken</h1>
         <p class="sub" id="wo-assign-progress"></p>
       </header>
       <form id="wo-assign-form" class="card assign-card" autocomplete="off">
         <p class="assign-text">Denk dir eine Person für <strong id="wo-target"></strong> aus.</p>
         <input id="wo-term" type="text" maxlength="40" placeholder="Name der Person" autocomplete="off" spellcheck="false">
-        <button id="wo-suggest" class="btn ghost" type="button">🎲 Vorschlag</button>
+        <button id="wo-suggest" class="btn ghost" type="button">Vorschlag</button>
         <button id="wo-submit" class="btn primary big" type="submit">Festlegen</button>
         <p id="wo-assign-done" class="muted small center" hidden></p>
       </form>
@@ -317,12 +321,12 @@
 
     <section id="screen-wo-game" class="screen">
       <header class="title">
-        <h1>🙋 Wer bin ich?</h1>
+        <h1>Wer bin ich?</h1>
         <p class="sub" id="wo-sub"></p>
       </header>
 
       <div id="wo-result" class="end-banner crew" hidden>
-        <span class="end-emoji">🏁</span>
+        <span class="end-emoji"></span>
         <h1>Spiel vorbei!</h1>
         <ol id="wo-ranking" class="ranking"></ol>
         <div class="result-actions">
@@ -337,8 +341,8 @@
         <span class="role-label" id="wo-q-label"></span>
         <p class="question-text" id="wo-q-text"></p>
         <div id="wo-q-buttons" class="answer-buttons">
-          <button class="btn yes" type="button" data-answer="yes">👍 Ja</button>
-          <button class="btn no" type="button" data-answer="no">👎 Nein</button>
+          <button class="btn yes" type="button" data-answer="yes">Ja</button>
+          <button class="btn no" type="button" data-answer="no">Nein</button>
           <button class="btn ghost" type="button" data-answer="abstain">Enthaltung</button>
         </div>
         <p class="muted small" id="wo-q-status"></p>
@@ -360,10 +364,36 @@
     </section>
 
 
-    <!-- ============ LÜGENDUELL (NUR ONLINE) ============ -->
+    <!-- ============ SPIEGEL – PASS & PLAY ============ -->
+    <section id="screen-lu-local" class="screen">
+      <button class="back-link" type="button" data-back="menu">← Menü</button>
+      <header class="title">
+        <h1>SPIEGEL</h1>
+        <p class="sub">Pass &amp; Play · Ein Gerät für zwei</p>
+      </header>
+      <div class="card">
+        <h2>Spieler</h2>
+        <div class="player-list">
+          <div class="player-row"><span class="num">1.</span><input id="lu-local-n1" type="text" maxlength="24" placeholder="Spieler 1" autocomplete="off" autocapitalize="words"></div>
+          <div class="player-row"><span class="num">2.</span><input id="lu-local-n2" type="text" maxlength="24" placeholder="Spieler 2" autocomplete="off" autocapitalize="words"></div>
+        </div>
+      </div>
+      <div class="card rules">
+        <h2>So geht's</h2>
+        <ol class="small muted">
+          <li>Zuerst stellt jeder geheim eine Falle für den anderen.</li>
+          <li>Vor jedem Zug wird das Gerät weitergegeben. Wer nicht dran ist, schaut weg.</li>
+          <li>Es gelten dieselben Regeln wie online. Wer beginnt, wird ausgelost.</li>
+        </ol>
+      </div>
+      <p id="lu-local-error" class="error" hidden></p>
+      <button id="lu-local-start" class="btn primary big" type="button">Spiel starten</button>
+    </section>
+
+    <!-- ============ SPIEGEL (ONLINE & PASS & PLAY) ============ -->
     <section id="screen-lu-setup" class="screen">
       <header class="title">
-        <h1>🪤 Falle stellen</h1>
+        <h1>Falle stellen</h1>
         <p class="sub" id="lu-setup-sub"></p>
       </header>
       <div class="card">
@@ -391,13 +421,14 @@
 
     <section id="screen-lu-game" class="screen">
       <header class="title">
-        <h1>🃏 Lügenduell</h1>
+        <h1>SPIEGEL</h1>
         <p class="sub" id="lu-sub"></p>
       </header>
 
       <div id="lu-result" class="end-banner" hidden>
         <span id="lu-end-emoji" class="end-emoji"></span>
         <h1 id="lu-end-title"></h1>
+        <div class="lu-final" id="lu-final"></div>
         <p id="lu-end-reason"></p>
         <div class="result-actions">
           <button id="lu-again" class="btn primary big" type="button">Revanche</button>
@@ -407,24 +438,19 @@
       </div>
 
 
-      <!-- Angreifer: Karte, 3 Zahlen, Wahrheit/Lüge -->
+      <!-- Angreifer: Karte und 3 Zahlen. Ob gelogen wird, ergibt sich aus den Zahlen. -->
       <form id="lu-attack" class="card lu-action in-game" autocomplete="off" hidden>
         <span class="role-label">Du legst zuerst</span>
         <h2>1. Welche Karte legst du verdeckt?</h2>
         <div id="lu-att-cards" class="num-row"></div>
         <h2>2. Welche 3 Zahlen nennst du?</h2>
-        <p class="small muted lu-explain">Dein Gegner sieht: „Meine Karte ist eine dieser Zahlen.“</p>
+        <p class="small muted lu-explain">Dein Gegner sieht: „Meine Karte ist eine dieser Zahlen.“ Ist deine Karte nicht dabei, lügst du.</p>
         <div id="lu-att-nums" class="num-row"></div>
-        <h2>3. Sagst du die Wahrheit?</h2>
-        <div id="lu-att-claim" class="answer-buttons">
-          <button type="button" class="btn" data-claim="truth" id="lu-claim-truth">Wahrheit</button>
-          <button type="button" class="btn" data-claim="lie" id="lu-claim-lie">Lüge (+2)</button>
-        </div>
         <p id="lu-att-hint" class="lu-hint"></p>
         <button id="lu-att-submit" class="btn primary big" type="submit">Karte verdeckt legen</button>
       </form>
 
-      <!-- Verteidiger: glauben / nicht glauben / Lügnerjoker, dann Karte -->
+      <!-- Verteidiger: Lügenjoker ja oder nein, dann Karte -->
       <form id="lu-defend" class="card lu-action in-game" autocomplete="off" hidden>
         <span class="role-label" id="lu-def-label"></span>
         <div class="lu-statement">
@@ -434,8 +460,8 @@
             <span class="lu-nums" id="lu-def-nums"></span>
           </div>
         </div>
-        <h2>1. Glaubst du der Aussage?</h2>
-        <div id="lu-def-choice" class="lu-choice"></div>
+        <h2>1. Lügenjoker setzen?</h2>
+        <div id="lu-def-choice"></div>
         <h2>2. Welche Karte legst du?</h2>
         <div id="lu-def-cards" class="num-row"></div>
         <button id="lu-def-submit" class="btn primary big" type="submit">Karte legen &amp; aufdecken</button>
@@ -443,7 +469,7 @@
 
       <!-- Warten auf den Gegner -->
       <div id="lu-wait" class="card lu-action in-game" hidden>
-        <span class="hand">⏳</span>
+        <span class="hand"></span>
         <p id="lu-wait-text" class="center"></p>
       </div>
 
@@ -470,12 +496,13 @@
       <details class="card lu-rules">
         <summary>Regeln</summary>
         <ul class="small muted">
-          <li>Jeder hat die Karten 1–9 und 2 Lügnerjoker, jede Karte kann nur einmal gelegt werden. Es gibt 8 Runden, die Rollen wechseln jede Runde.</li>
-          <li>Wer zuerst legt, wählt verdeckt eine Karte und nennt 3 Zahlen („meine Karte ist eine davon“). Er legt fest, ob das stimmt oder gelogen ist.</li>
-          <li>Der andere glaubt ihr oder nicht. Glaubt er nicht, kann er einen Lügnerjoker einsetzen. Danach legt er seine Karte.</li>
+          <li>Jeder hat die Karten 1–9 und 2 Lügenjoker, jede Karte kann nur einmal gelegt werden. Es gibt 8 Runden, die Rollen wechseln jede Runde.</li>
+          <li>Wer zuerst legt, wählt verdeckt eine Karte und nennt 3 Zahlen („meine Karte ist eine davon“). Ist die Karte nicht dabei, ist es eine Lüge. Das erkennt das Spiel automatisch.</li>
+          <li>Der andere kann einen Lügenjoker setzen. Danach legt er seine Karte.</li>
           <li>Differenz ≥ 2: Die höhere Karte gewinnt ihren Wert. Differenz 1: Die niedrigere Karte gewinnt die Summe beider Karten. Gleich: keine Punkte.</li>
-          <li>Lügnerjoker richtig: +2 Punkte, der Lügner verliert seine Punkte dieser Runde. Lügnerjoker falsch: trotzdem +1 Punkt, der andere behält seine Punkte.</li>
-          <li>Eine nicht aufgedeckte Lüge bringt +2 Punkte – aber nur, solange der Gegner noch Lügnerjoker hat.</li>
+          <li>Lügenjoker richtig: Der Lügner bekommt in dieser Runde 0 Punkte, du bekommst +2. Lügenjoker falsch: −2 für dich.</li>
+          <li>Eine nicht aufgedeckte Lüge bringt +2 Punkte – aber nur, solange der Gegner noch Lügenjoker hat.</li>
+          <li>Jeder ungenutzte Lügenjoker kostet am Spielende −1 Punkt.</li>
           <li>Falle: Spielt der Gegner die Fallenkarte in der gewählten Spanne, gibt es 3 (3 Runden), 6 (2 Runden) oder 9 Punkte (1 Runde).</li>
         </ul>
       </details>
@@ -488,7 +515,7 @@
     <section id="screen-online" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
       <header class="title">
-        <h1>🌐 Online spielen</h1>
+        <h1>Online spielen</h1>
         <p class="sub" id="online-sub">Jeder auf seinem eigenen Gerät</p>
       </header>
 
@@ -567,7 +594,7 @@
       <div class="reveal-stage">
         <button id="o-reveal-card" class="reveal-card" type="button">
           <div id="o-reveal-front" class="reveal-face">
-            <span class="hand">🔒</span>
+            <span class="hand"></span>
             <span class="big-name" id="o-reveal-name"></span>
             <span class="small muted">Tippe hier, um deine Rolle zu sehen.<br>Achte darauf, dass niemand mitschaut!</span>
           </div>
@@ -581,7 +608,7 @@
     <!-- ============ ONLINE: SPIEL ============ -->
     <section id="screen-o-game" class="screen">
       <header class="title">
-        <h1>🗣️ Spielrunde</h1>
+        <h1>Spielrunde</h1>
         <p class="sub" id="o-sub"></p>
       </header>
 
@@ -634,7 +661,7 @@
         <div id="o-profiles" class="profiles"></div>
       </div>
 
-      <button id="o-guess" class="btn imp in-game" type="button" hidden>🕵️ Begriff raten</button>
+      <button id="o-guess" class="btn imp in-game" type="button" hidden>Begriff raten</button>
 
       <div class="card" id="o-log-card" hidden>
         <h2>Verlauf</h2>
@@ -646,7 +673,7 @@
     </section>
   </main>
 
-  <!-- Lügenduell: Punktestand nach jeder Runde (ca. 5 Sekunden) -->
+  <!-- SPIEGEL: Punktestand nach jeder Runde (ca. 5 Sekunden) -->
   <div id="lu-score-overlay" class="overlay lu-score-overlay" hidden>
     <div class="overlay-box">
       <span class="role-label" id="lu-so-title"></span>
@@ -667,7 +694,7 @@
   <!-- Online: Verräter rät den Begriff -->
   <div id="o-guess-panel" class="overlay" hidden>
     <form id="o-guess-form" class="overlay-box" autocomplete="off">
-      <span class="hand">🕵️</span>
+      <span class="hand"></span>
       <h2>Begriff raten</h2>
       <p class="muted small">Richtig = gewonnen, falsch = verloren. Danach bist du so oder so raus. Die anderen erfahren den Begriff nicht.</p>
       <input id="o-guess-word" type="text" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -684,7 +711,7 @@
       <p class="progress" id="vote-progress"></p>
 
       <div id="vote-handoff" class="vote-step">
-        <span class="hand">📱</span>
+        <span class="hand"></span>
         <span class="small">Gib das Gerät an</span>
         <span class="big-name" id="vote-voter"></span>
         <button id="vote-ready" class="btn primary big" type="button"></button>
@@ -710,13 +737,13 @@
   <!-- Verräter rät den Begriff -->
   <div id="guess-panel" class="overlay" hidden>
     <form id="form-guess" class="overlay-box" autocomplete="off">
-      <span class="hand">🕵️</span>
+      <span class="hand"></span>
       <h2>Begriff raten</h2>
       <p class="muted small">Nur für Verräter. Richtig = gewonnen, falsch = verloren. Danach ist man so oder so raus – die anderen erfahren den Begriff nicht.</p>
       <select id="guess-name"></select>
       <div class="secret-input">
         <input id="guess-word" type="password" placeholder="Begriff" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button type="button" id="toggle-secret" class="eye" aria-label="Eingabe anzeigen">👁️</button>
+        <button type="button" id="toggle-secret" class="eye" aria-label="Eingabe anzeigen">Zeigen</button>
       </div>
       <div class="modal-actions">
         <button id="guess-cancel" class="btn ghost" type="button">Abbrechen</button>
@@ -744,6 +771,8 @@
   <script src="wbi.js"></script>
   <script src="online.js"></script>
   <script src="wbi-online.js"></script>
-  <script src="luegen-online.js"></script>
+  <script src="spiegel-rules.js"></script>
+  <script src="spiegel-online.js"></script>
+  <script src="spiegel-local.js"></script>
 </body>
 </html>

@@ -10,7 +10,7 @@
 
 // Zufällige Vorschläge aus den Personen-Kategorien
 function randomPerson(exclude = []) {
-  const pool = ["promis", "geschichte", "streamer"]
+  const pool = ["musiker", "schauspieler", "politiker", "geschichte", "streamer"]
     .flatMap((id) => Object.values(CATEGORIES[id].words).flat())
     .map(displayWord);
   const taken = new Set(exclude.map(normalize));
@@ -109,7 +109,7 @@ const WBI = (() => {
 
     await showPhase({
       num: 3,
-      icon: "🔄",
+      icon: "",
       title: "Personen zeigen",
       text: "Jetzt hält jeder reihum das Gerät mit dem Bildschirm zu den anderen und tippt blind auf das Feld.\nSo sehen alle seine Person – nur er selbst nicht.",
       button: "Los geht's",
@@ -167,7 +167,7 @@ const WBI = (() => {
     renderGame();
     await showPhase({
       num: 4,
-      icon: "❓",
+      icon: "",
       title: "Wer bin ich?",
       text: `Stellt reihum Ja/Nein-Fragen.\nBei „Ja“ darfst du weiterfragen, bei „Nein“ ist der Nächste dran.\n\n${game.players[0].name} beginnt.`,
       button: "Los geht's",
@@ -203,7 +203,7 @@ const WBI = (() => {
       const current = !game.over && i === game.turn;
       card.className = "wbi-card" + (current ? " current" : "") + (p.rank !== null ? " solved" : "");
 
-      const badge = p.rank !== null ? `<span class="badge win">🏆 Platz ${p.rank}</span>` : current ? `<span class="badge">Am Zug</span>` : "";
+      const badge = p.rank !== null ? `<span class="badge win">Platz ${p.rank}</span>` : current ? `<span class="badge">Am Zug</span>` : "";
       card.innerHTML = `
         <div class="profile-head">
           <span class="avatar">${escapeHtml(p.name.charAt(0).toUpperCase())}</span>
@@ -265,21 +265,21 @@ const WBI = (() => {
         game.over = true;
         renderGame();
         window.scrollTo({ top: 0, behavior: "smooth" });
-        await showModal({ emoji: "🎉", title: `${p.name} hat es erraten!`, text: `${p.name} ist ${p.term}.\nDamit ist das Spiel vorbei.` });
+        await showModal({ emoji: "", title: `${p.name} hat es erraten!`, text: `${p.name} ist ${p.term}.\nDamit ist das Spiel vorbei.` });
         return;
       }
       nextTurn();
       renderGame();
-      await showModal({ emoji: "🎉", title: `${p.name} hat es erraten!`, text: `${p.name} ist ${p.term} – Platz ${p.rank}!\nWeiter geht's mit ${game.players[game.turn].name}.` });
+      await showModal({ emoji: "", title: `${p.name} hat es erraten!`, text: `${p.name} ist ${p.term} – Platz ${p.rank}!\nWeiter geht's mit ${game.players[game.turn].name}.` });
     } else {
       nextTurn();
       renderGame();
-      await showModal({ emoji: "❌", title: "Leider falsch", text: `„${text.trim()}“ ist es nicht.\nJetzt ist ${game.players[game.turn].name} dran.` });
+      await showModal({ emoji: "", title: "Leider falsch", text: `„${text.trim()}“ ist es nicht.\nJetzt ist ${game.players[game.turn].name} dran.` });
     }
   }
 
   async function endGame() {
-    const ok = await showModal({ emoji: "🏁", title: "Spiel beenden?", text: "Alle Personen werden aufgedeckt.", ok: "Beenden", cancel: "Weiterspielen" });
+    const ok = await showModal({ emoji: "", title: "Spiel beenden?", text: "Alle Personen werden aufgedeckt.", ok: "Beenden", cancel: "Weiterspielen" });
     if (!ok) return;
     game.over = true;
     renderGame();

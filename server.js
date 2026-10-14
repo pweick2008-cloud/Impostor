@@ -1,6 +1,6 @@
 "use strict";
 
-// Partyspiele – Online-Server (Verräter & Wer bin ich?)
+// Partyspiele – Online-Server (Verräter, Wer bin ich? & SPIEGEL)
 // Liefert die Website aus und verwaltet Lobbys über WebSockets.
 // Der Server kennt alle Rollen und den Begriff; jeder Spieler bekommt
 // nur die Informationen, die er sehen darf.
@@ -12,6 +12,7 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const { CATEGORIES } = require("./words.js");
 const { shuffle, pick, normalize, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
+const { SpiegelRules } = require("./spiegel-rules.js");
 
 const PORT = process.env.PORT || 3000;
 const MIN_PLAYERS = 3; // Verräter
@@ -35,11 +36,18 @@ const STATIC = {
   "/words.js": ["words.js", "text/javascript; charset=utf-8"],
   "/wbi.js": ["wbi.js", "text/javascript; charset=utf-8"],
   "/wbi-online.js": ["wbi-online.js", "text/javascript; charset=utf-8"],
-  "/luegen-online.js": ["luegen-online.js", "text/javascript; charset=utf-8"]
+  "/spiegel-rules.js": ["spiegel-rules.js", "text/javascript; charset=utf-8"],
+  "/spiegel-online.js": ["spiegel-online.js", "text/javascript; charset=utf-8"],
+  "/spiegel-local.js": ["spiegel-local.js", "text/javascript; charset=utf-8"]
 };
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  if (url.pathname === "/favicon.ico") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (url.pathname === "/health") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("ok");
@@ -300,7 +308,7 @@ function finishVote(lobby) {
   if (!eliminated) {
     g.log.push("Vote: niemand ist ausgeschieden.");
     broadcastEvent(lobby, {
-      emoji: "🤷",
+      emoji: "",
       title: "Niemand scheidet aus",
       text: top === 0 ? "Alle haben sich enthalten." : leaders.length > 1 ? "Gleichstand – keine Entscheidung." : "Die Enthaltungen überwiegen.",
       tally
@@ -313,7 +321,7 @@ function finishVote(lobby) {
   if (!g.impostors.has(eliminated)) {
     g.results[eliminated] = "rausgewählt (war unschuldig)";
     g.log.push(`Vote: ${name} wurde rausgewählt – war KEIN Verräter.`);
-    broadcastEvent(lobby, { emoji: "😱", title: `${name} war unschuldig!`, text: `${name} war kein Verräter.`, tally });
+    broadcastEvent(lobby, { emoji: "", title: `${name} war unschuldig!`, text: `${name} war kein Verräter.`, tally });
     endGame(lobby, "impostor", `${name} war unschuldig und wurde rausgewählt.`);
     return;
   }
@@ -322,14 +330,14 @@ function finishVote(lobby) {
   g.log.push(`Vote: ${name} wurde rausgewählt – war ein Verräter!`);
   if (!checkImpostorsGone(lobby, "Alle Verräter wurden enttarnt.")) {
     broadcastEvent(lobby, {
-      emoji: "🎯",
+      emoji: "",
       title: `${name} war ein Verräter!`,
       text: `${name} ist raus. Es sind noch Verräter im Spiel.`,
       tally
     });
     fixTurn(g);
   } else {
-    broadcastEvent(lobby, { emoji: "🎯", title: `${name} war ein Verräter!`, text: `${name} ist raus.`, tally });
+    broadcastEvent(lobby, { emoji: "", title: `${name} war ein Verräter!`, text: `${name} ist raus.`, tally });
   }
 }
 
@@ -436,7 +444,7 @@ const handlers = {
     if (!normalize(name)) fail("Bitte gib einen Namen ein.");
     if (lobby.game && lobby.game.phase !== "over") fail("Das Spiel läuft gerade. Tritt bei, sobald die Runde vorbei ist.");
     if (lobby.players.length >= MAX_PLAYERS_BY_GAME[lobby.gameType]) {
-      fail(lobby.gameType === "luegen" ? "Die Lobby ist voll – Lügenduell spielt man zu zweit." : "Die Lobby ist voll.");
+      fail(lobby.gameType === "luegen" ? "Die Lobby ist voll – SPIEGEL spielt man zu zweit." : "Die Lobby ist voll.");
     }
     if (lobby.players.some((p) => p.key === normalize(name))) fail(`Der Name „${name}“ ist in dieser Lobby schon vergeben.`);
 
@@ -539,7 +547,7 @@ const handlers = {
     if (!voteReady(g)) fail("Erst muss jeder einen Tipp abgeben.");
     g.vote = { voters: activeIds(g), ballots: new Map(), startedBy: me.id };
     g.log.push(`${me.name} hat einen Vote gestartet.`);
-    broadcastEvent(lobby, { emoji: "🗳️", title: "Abstimmung!", text: `${me.name} hat einen Vote gestartet. Wähle einen Spieler oder enthalte dich.`, silent: true });
+    broadcastEvent(lobby, { emoji: "", title: "Abstimmung!", text: `${me.name} hat einen Vote gestartet. Wähle einen Spieler oder enthalte dich.`, silent: true });
     return lobby;
   },
 
@@ -582,7 +590,7 @@ const handlers = {
     const correct = isCorrectGuess(guess, g.entry, !!g.category.person);
     const wasLast = activeIds(g).filter((id) => g.impostors.has(id)).length === 1;
     g.out.add(me.id);
-    g.results[me.id] = correct ? "hat den Begriff erraten 🏆" : "hat falsch geraten";
+    g.results[me.id] = correct ? "hat den Begriff erraten" : "hat falsch geraten";
     if (g.vote) {
       g.vote.voters = g.vote.voters.filter((v) => v !== me.id);
       g.vote.ballots.delete(me.id);
@@ -598,7 +606,7 @@ const handlers = {
     // Mehrere Verräter: persönlicher Sieg/Niederlage, Begriff bleibt geheim
     g.log.push(`${me.name} hat ${correct ? "richtig" : "falsch"} geraten und ist ausgeschieden.`);
     broadcastEvent(lobby, {
-      emoji: correct ? "🏆" : "💥",
+      emoji: "",
       title: correct ? `${me.name} hat richtig geraten!` : `${me.name} lag falsch!`,
       text: `${me.name} war Verräter, ${correct ? "gewinnt persönlich" : "hat verloren"} und ist ausgeschieden. Der Begriff bleibt geheim.`
     });
@@ -643,7 +651,7 @@ function leaveCurrent(ws) {
    Enthaltung ab. Bei „Ja“ darf man weiterfragen, sonst ist der Nächste dran.
    ========================================================= */
 function randomPerson(exclude = []) {
-  const pool = ["promis", "geschichte", "streamer"]
+  const pool = ["musiker", "schauspieler", "politiker", "geschichte", "streamer"]
     .flatMap((id) => Object.values(CATEGORIES[id].words).flat())
     .map(displayWord);
   const taken = new Set(exclude.map(normalize));
@@ -767,7 +775,7 @@ function wbiResolve(lobby) {
   g.question = null;
   broadcastEvent(lobby, {
     toast: true,
-    text: `„${q.text}“ → ${isYes ? "👍 Ja" : "👎 Nein"} (${yes}:${no})` +
+    text: `„${q.text}“ → ${isYes ? "Ja" : "Nein"} (${yes}:${no})` +
       (isYes ? ` – ${g.names[q.asker]} darf weiterfragen.` : "")
   });
   if (!isYes) wbiNextTurn(g);
@@ -869,11 +877,11 @@ Object.assign(handlers, {
     if (isCorrectGuess(text, term, true)) {
       g.ranks[me.id] = ++g.solvedCount;
       g.log.push(`${me.name} hat es erraten: ${term} (Platz ${g.ranks[me.id]})`);
-      broadcastEvent(lobby, { emoji: "🎉", title: `${me.name} hat es erraten!`, text: `${me.name} ist ${term} – Platz ${g.ranks[me.id]}!` });
+      broadcastEvent(lobby, { emoji: "", title: `${me.name} hat es erraten!`, text: `${me.name} ist ${term} – Platz ${g.ranks[me.id]}!` });
       if (!wbiCheckEnd(lobby)) wbiNextTurn(g);
     } else {
       g.log.push(`${me.name} hat „${text}“ geraten – falsch.`);
-      broadcastEvent(lobby, { toast: true, text: `❌ ${me.name} hat „${text}“ geraten – falsch.` });
+      broadcastEvent(lobby, { toast: true, text: `${me.name} hat „${text}“ geraten – falsch.` });
       wbiNextTurn(g);
     }
     return lobby;
@@ -892,214 +900,97 @@ Object.assign(handlers, {
 
 
 /* =========================================================
-   Lügenduell – nur online, genau 2 Spieler
-   - Jeder hat die Karten 1–9, einen Fallenjoker und 2 Lügnerjoker.
-   - Vor Spielbeginn stellt jeder eine Falle: eine Karte des Gegners und
-     eine Rundenspanne von höchstens 3 Runden.
-   - 8 Runden, die Rollen wechseln jede Runde. Der Angreifer legt verdeckt
-     eine Karte, nennt 3 Zahlen („meine Karte ist eine davon“) und
-     legt fest, ob sie wahr oder gelogen ist. Der Verteidiger glaubt ihr
-     oder nicht (optional mit Lügnerjoker) und legt dann seine Karte.
+   SPIEGEL – online, genau 2 Spieler
+   Die Wertung kommt aus spiegel-rules.js (dieselbe wie bei Pass & Play).
+   SpiegelRules kennt die Spieler als "p0"/"p1"; der Server übersetzt
+   zwischen diesen IDs und den echten Spieler-IDs und schickt jedem
+   nur, was er sehen darf.
    ========================================================= */
-const LU_ROUNDS = 8;
-const LU_TRAP_POINTS = { 1: 9, 2: 6, 3: 3 }; // Spanne → Punkte
+const LU_ROUNDS = SpiegelRules.ROUNDS;
 
 function luStart(lobby) {
   const ids = lobby.players.map((p) => p.id);
-  const starter = pick(ids);
-  const other = ids.find((id) => id !== starter);
-  const g = {
+  const G = SpiegelRules.newGame(lobby.players.map((p) => p.name), Math.random() < 0.5 ? 0 : 1);
+  lobby.game = {
     type: "luegen",
-    phase: "setup", // setup → play → over
-    ids: [starter, other], // Runde 1 greift der Startspieler an, danach abwechselnd
-    names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
-    starter,
-    jokers: { [starter]: 2, [other]: 2 },
-    hand: { [starter]: [1, 2, 3, 4, 5, 6, 7, 8, 9], [other]: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-    trap: { [starter]: null, [other]: null },
-    trapState: { [starter]: "offen", [other]: "offen" }, // offen | ausgelöst | verpasst
-    score: { [starter]: 0, [other]: 0 },
-    round: 1,
-    step: "attack", // attack → defend → reveal
-    move: null,
+    G,
+    ids, // ids[0] = "p0", ids[1] = "p1"
     ready: new Set(),
-    history: [],
     log: [],
-    result: null
+    get phase() { return this.G.phase; }
   };
-  lobby.game = g;
 }
 
-const luAttacker = (g) => g.ids[(g.round - 1) % 2];
-const luDefender = (g) => g.ids[g.round % 2];
-const luOpp = (g, id) => g.ids.find((x) => x !== id);
+const luPid = (g, id) => "p" + g.ids.indexOf(id); // echte ID → "p0"/"p1"
+const luReal = (g, pid) => g.ids[Number(String(pid).slice(1))]; // "p0"/"p1" → echte ID
+
+function luMapEntry(g, e) {
+  if (!e) return null;
+  const gain = {};
+  for (const [pid, v] of Object.entries(e.gain)) gain[luReal(g, pid)] = v;
+  return { ...e, attacker: luReal(g, e.attacker), gain };
+}
 
 function luView(lobby, g, me) {
-  const over = g.phase === "over";
+  const G = g.G;
+  const over = G.phase === "over";
   const inGame = g.ids.includes(me.id);
-  const opp = inGame ? luOpp(g, me.id) : null;
-  const m = g.move;
-  const attacker = luAttacker(g);
-  const players = g.ids.map((id) => {
-    const p = lobby.players.find((x) => x.id === id);
-    const own = id === me.id;
-    const trap = g.trap[id];
-    const showTrap = own || over || g.trapState[id] !== "offen";
+  const attacker = luReal(g, G.attacker);
+  const players = G.players.map((p) => {
+    const id = luReal(g, p.id);
+    const lp = lobby.players.find((x) => x.id === id);
+    // Die gegnerische Falle bleibt verdeckt, bis sie zuschnappt oder das Spiel endet
+    const showTrap = id === me.id || over || p.trapState === "ausgelöst";
     return {
       id,
-      name: g.names[id],
-      connected: !!(p && p.connected),
-      score: g.score[id],
-      jokers: g.jokers[id],
-      hand: g.hand[id], // gespielte Karten sind ohnehin aufgedeckt
-      trapSet: !!trap,
-      trap: showTrap && trap ? { ...trap, points: LU_TRAP_POINTS[trap.to - trap.from + 1] } : null,
-      trapState: g.trapState[id],
-      starter: id === g.starter
+      name: p.name,
+      connected: !!(lp && lp.connected),
+      score: p.score,
+      jokers: p.jokers,
+      hand: [...p.hand], // gespielte Karten sind ohnehin aufgedeckt
+      trapSet: p.trapSet,
+      trap: showTrap && p.trap ? { ...p.trap } : null,
+      trapState: p.trapState,
+      starter: p.starter
     };
   });
 
   let move = null;
-  if (m) {
-    const iAmAttacker = me.id === attacker;
-    const revealed = g.step === "reveal";
-    move = {
-      nums: m.nums,
-      // Karte und Wahrheit/Lüge sieht der Verteidiger erst nach dem Aufdecken
-      card: iAmAttacker || revealed ? m.card : null,
-      claim: iAmAttacker || revealed ? m.claim : null,
-      defense: revealed || me.id !== attacker ? m.defense || null : m.defense ? "done" : null,
-      defCard: revealed || me.id !== attacker ? m.defCard || null : null
-    };
+  if (G.move) {
+    // Karte und Wahrheit/Lüge sieht der Verteidiger erst nach dem Aufdecken
+    const visible = me.id === attacker || G.step === "reveal";
+    move = { nums: [...G.move.nums], card: visible ? G.move.card : null, claim: visible ? G.move.claim : null };
   }
 
   return {
     type: "luegen",
-    phase: g.phase,
+    phase: G.phase,
     inGame,
     you: me.id,
-    opp,
+    opp: inGame ? g.ids.find((x) => x !== me.id) : null,
     players,
-    round: g.round,
-    rounds: LU_ROUNDS,
-    step: g.step,
+    round: G.round,
+    rounds: G.rounds,
+    step: G.step,
     attacker,
-    defender: luDefender(g),
+    defender: luReal(g, SpiegelRules.other(G.attacker)),
     move,
-    lastResult: g.step === "reveal" ? g.history[g.history.length - 1] : null,
+    lastResult: G.step === "reveal" ? luMapEntry(g, G.lastResult) : null,
     ready: [...g.ready],
-    history: g.history,
+    history: G.history.map((e) => luMapEntry(g, e)),
     log: g.log,
-    result: g.result
+    result: G.result ? { ...G.result, winner: G.result.winner ? luReal(g, G.result.winner) : null } : null
   };
-}
-
-function luResolve(lobby) {
-  const g = lobby.game;
-  const m = g.move;
-  const att = luAttacker(g);
-  const def = luDefender(g);
-  const a = m.card;
-  const d = m.defCard;
-  const lines = [];
-
-  // Kartenvergleich
-  let winner = null;
-  let pts = 0;
-  const diff = Math.abs(a - d);
-  if (diff >= 2) {
-    winner = a > d ? att : def;
-    pts = Math.max(a, d);
-    lines.push(`${g.names[winner]} gewinnt mit der höheren Karte (Differenz ${diff}) und bekommt ${pts} Punkte.`);
-  } else if (diff === 1) {
-    winner = a < d ? att : def;
-    pts = a + d;
-    lines.push(`Differenz 1: ${g.names[winner]} gewinnt mit der niedrigeren Karte und bekommt die Summe ${pts} Punkte.`);
-  } else {
-    lines.push("Beide haben die gleiche Karte gelegt – keine Punkte.");
-  }
-
-  let attGain = winner === att ? pts : 0;
-  let defGain = winner === def ? pts : 0;
-  const lied = m.claim === "lie";
-  const jokersBefore = g.jokers[def];
-
-  if (m.defense === "joker") {
-    g.jokers[def]--;
-    if (lied) {
-      defGain += 2;
-      if (attGain) lines.push(`Lügnerjoker richtig! ${g.names[att]} hat gelogen und verliert ${attGain} Punkte, ${g.names[def]} bekommt 2 Punkte.`);
-      else lines.push(`Lügnerjoker richtig! ${g.names[att]} hat gelogen, ${g.names[def]} bekommt 2 Punkte.`);
-      attGain = 0;
-    } else {
-      defGain += 1;
-      lines.push(`Lügnerjoker daneben – ${g.names[att]} hat die Wahrheit gesagt. ${g.names[def]} bekommt trotzdem 1 Punkt.`);
-    }
-  } else if (lied) {
-    if (jokersBefore > 0) {
-      attGain += 2;
-      lines.push(`${g.names[att]} hat erfolgreich gelogen: +2 Punkte.`);
-    } else {
-      lines.push(`${g.names[att]} hat gelogen – das bringt nichts mehr, weil ${g.names[def]} keine Lügnerjoker mehr hat.`);
-    }
-  }
-
-  // Fallen: Spielt der Gegner die Fallenkarte in der Spanne, gibt es Punkte
-  const trapGain = { [att]: 0, [def]: 0 };
-  for (const owner of g.ids) {
-    const trap = g.trap[owner];
-    if (!trap || g.trapState[owner] !== "offen") continue;
-    const victim = luOpp(g, owner);
-    const played = victim === att ? a : d;
-    if (played !== trap.card) continue;
-    if (g.round >= trap.from && g.round <= trap.to) {
-      const p = LU_TRAP_POINTS[trap.to - trap.from + 1];
-      trapGain[owner] = p;
-      g.trapState[owner] = "ausgelöst";
-      lines.push(`🪤 Falle! ${g.names[victim]} hat die ${trap.card} in Runde ${g.round} gespielt – ${g.names[owner]} bekommt ${p} Punkte.`);
-    } else {
-      g.trapState[owner] = "verpasst"; // Karte ist weg, die Falle kann nicht mehr zuschnappen
-    }
-  }
-
-  const gain = { [att]: attGain + trapGain[att], [def]: defGain + trapGain[def] };
-  g.score[att] += gain[att];
-  g.score[def] += gain[def];
-
-  g.history.push({
-    round: g.round,
-    attacker: att,
-    nums: m.nums,
-    claim: m.claim,
-    card: a,
-    defense: m.defense,
-    defCard: d,
-    gain,
-    lines
-  });
-  g.log.push(`Runde ${g.round}: ${g.names[att]} ${a} – ${d} ${g.names[def]} (${gain[att]}:${gain[def]})`);
-  g.step = "reveal";
-  g.ready = new Set();
-}
-
-function luFinish(lobby, reason) {
-  const g = lobby.game;
-  const [x, y] = g.ids;
-  const winner = g.score[x] === g.score[y] ? null : g.score[x] > g.score[y] ? x : y;
-  // Fallen, die nie ausgelöst wurden, gelten als verpasst
-  for (const id of g.ids) if (g.trapState[id] === "offen") g.trapState[id] = "verpasst";
-  g.result = { winner, reason: reason || (winner ? `${g.names[winner]} gewinnt mit ${g.score[winner]} Punkten!` : "Unentschieden!") };
-  g.phase = "over";
-  g.move = null;
 }
 
 function luDrop(lobby, id) {
   const g = lobby.game;
   if (g.phase === "over" || !g.ids.includes(id)) return;
-  const opp = luOpp(g, id);
-  g.log.push(`${g.names[id]} hat das Spiel verlassen.`);
-  luFinish(lobby);
-  g.result = { winner: opp, reason: `${g.names[id]} hat das Spiel verlassen – ${g.names[opp]} gewinnt.` };
+  const opp = g.ids.find((x) => x !== id);
+  g.log.push(`${g.G.players[g.ids.indexOf(id)].name} hat das Spiel verlassen.`);
+  SpiegelRules.finish(g.G);
+  const name = (x) => g.G.players[g.ids.indexOf(x)].name;
+  g.G.result = { winner: luPid(g, opp), reason: `${name(id)} hat das Spiel verlassen – ${name(opp)} gewinnt.` };
 }
 
 function luInt(v, min, max) {
@@ -1108,71 +999,63 @@ function luInt(v, min, max) {
   return n;
 }
 
+function luRequirePlayer(g, me) {
+  if (!g.ids.includes(me.id)) fail("Du spielst nicht mit.");
+  return SpiegelRules.byId(g.G, luPid(g, me.id));
+}
+
 Object.assign(handlers, {
   luTrap(ws, msg, lobby, me) {
     const g = requireGame(lobby, "setup", "luegen");
-    if (!g.ids.includes(me.id)) fail("Du spielst nicht mit.");
+    luRequirePlayer(g, me);
     const card = luInt(msg.card, 1, 9);
     const from = luInt(msg.from, 1, LU_ROUNDS);
     const to = luInt(msg.to, 1, LU_ROUNDS);
     if (to < from) fail("Die Spanne muss mit der kleineren Runde beginnen.");
     if (to - from + 1 > 3) fail("Die Spanne darf höchstens 3 Runden lang sein.");
-    g.trap[me.id] = { card, from, to };
-    if (g.ids.every((id) => g.trap[id])) {
-      g.phase = "play";
-      g.log.push(`Beide Fallen sind gestellt. ${g.names[luAttacker(g)]} beginnt.`);
+    SpiegelRules.setTrap(g.G, luPid(g, me.id), card, from, to);
+    if (g.G.phase === "play") {
+      g.log.push(`Beide Fallen sind gestellt. ${SpiegelRules.byId(g.G, g.G.attacker).name} beginnt.`);
     }
     return lobby;
   },
 
   luAttack(ws, msg, lobby, me) {
     const g = requireGame(lobby, "play", "luegen");
-    if (g.step !== "attack" || luAttacker(g) !== me.id) fail("Du bist gerade nicht dran.");
+    const G = g.G;
+    if (G.step !== "attack" || luReal(g, G.attacker) !== me.id) fail("Du bist gerade nicht dran.");
     const card = luInt(msg.card, 1, 9);
-    if (!g.hand[me.id].includes(card)) fail("Diese Karte hast du schon gespielt.");
     const nums = [...new Set((Array.isArray(msg.nums) ? msg.nums : []).map((n) => luInt(n, 1, 9)))].sort((x, y) => x - y);
     if (nums.length !== 3) fail("Wähle genau 3 Zahlen.");
-    const claim = msg.claim === "lie" ? "lie" : msg.claim === "truth" ? "truth" : null;
-    if (!claim) fail("Wähle, ob deine Aussage die Wahrheit oder eine Lüge ist.");
-    const inSet = nums.includes(card);
-    if (claim === "truth" && !inSet) fail(`Deine Karte ${card} ist nicht unter ${nums.join(", ")} – das wäre eine Lüge.`);
-    if (claim === "lie" && inSet) fail(`Deine Karte ${card} ist unter ${nums.join(", ")} – das wäre die Wahrheit.`);
-
-    g.hand[me.id] = g.hand[me.id].filter((c) => c !== card);
-    g.move = { card, nums, claim, defense: null, defCard: null };
-    g.step = "defend";
+    // Ob gelogen wird, ergibt sich aus Karte und Zahlen – ein mitgeschicktes "claim" wird ignoriert
+    if (!SpiegelRules.attack(G, card, nums)) fail("Diese Karte hast du schon gespielt.");
     return lobby;
   },
 
   luDefend(ws, msg, lobby, me) {
     const g = requireGame(lobby, "play", "luegen");
-    if (g.step !== "defend" || luDefender(g) !== me.id) fail("Du bist gerade nicht dran.");
-    const defense = ["believe", "doubt", "joker"].includes(msg.defense) ? msg.defense : null;
-    if (!defense) fail("Glaubst du der Aussage oder nicht?");
-    if (defense === "joker" && g.jokers[me.id] <= 0) fail("Du hast keine Lügnerjoker mehr.");
+    const G = g.G;
+    if (G.step !== "defend" || luReal(g, SpiegelRules.other(G.attacker)) !== me.id) fail("Du bist gerade nicht dran.");
+    const mine = luRequirePlayer(g, me);
+    const defense = msg.defense === "joker" ? "joker" : "believe";
+    if (defense === "joker" && mine.jokers <= 0) fail("Du hast keine Lügenjoker mehr.");
     const card = luInt(msg.card, 1, 9);
-    if (!g.hand[me.id].includes(card)) fail("Diese Karte hast du schon gespielt.");
-    g.hand[me.id] = g.hand[me.id].filter((c) => c !== card);
-    g.move.defense = defense;
-    g.move.defCard = card;
-    luResolve(lobby);
+    if (!SpiegelRules.defend(G, defense, card)) fail("Diese Karte hast du schon gespielt.");
+    const e = G.lastResult;
+    const name = (pid) => SpiegelRules.byId(G, pid).name;
+    g.log.push(`Runde ${e.round}: ${name(e.attacker)} ${e.card} – ${e.defCard} ${name(SpiegelRules.other(e.attacker))} (${e.gain[e.attacker]}:${e.gain[SpiegelRules.other(e.attacker)]})`);
+    g.ready = new Set();
     return lobby;
   },
 
   luNext(ws, msg, lobby, me) {
     const g = requireGame(lobby, "play", "luegen");
-    if (g.step !== "reveal" || !g.ids.includes(me.id)) return lobby;
+    if (g.G.step !== "reveal" || !g.ids.includes(me.id)) return lobby;
     g.ready.add(me.id);
     const opponentGone = g.ids.some((id) => !lobby.players.find((p) => p.id === id && p.connected));
     if (g.ids.every((id) => g.ready.has(id)) || opponentGone) {
-      if (g.round >= LU_ROUNDS) {
-        luFinish(lobby);
-      } else {
-        g.round++;
-        g.step = "attack";
-        g.move = null;
-        g.ready = new Set();
-      }
+      SpiegelRules.next(g.G); // nach der letzten Runde: Spielende mit −1 je ungenutztem Joker
+      g.ready = new Set();
     }
     return lobby;
   }
