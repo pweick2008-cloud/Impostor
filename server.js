@@ -13,7 +13,7 @@ const { WebSocketServer } = require("ws");
 const { CATEGORIES } = require("./words.js");
 const { shuffle, pick, normalize, levenshtein, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 const { SpiegelRules } = require("./spiegel-rules.js");
-const { DRAW_WORDS } = require("./draw-words.js");
+const { DRAW_POOLS, LEVELS: DR_LEVELS, LEVEL_NAMES: DR_LEVEL_NAMES } = require("./draw-words.js");
 
 const PORT = process.env.PORT || 3000;
 const MIN_PLAYERS = 3; // Verräter
@@ -1414,7 +1414,18 @@ Object.assign(handlers, {
    - Punkte: Wer richtig rät, bekommt 50 bis 200 Punkte – je schneller,
      desto mehr. Der Zeichner bekommt 50 Punkte pro richtigem Rater.
    ========================================================= */
-const DR_DEFAULTS = { rounds: 3, time: 80 };
+const DR_DEFAULTS = { rounds: 3, time: 80, hints: "mittel", level: "mittel" };
+// Anteil der Buchstaben, die als Tipp aufgedeckt werden
+const DR_HINT_SHARE = { keine: 0, wenig: 0.15, mittel: 0.3, viel: 0.45 };
+
+// Anzahl der Tipps abhängig von der Wortlänge: mindestens 1 (außer bei „keine“),
+// höchstens die Hälfte der Buchstaben – ein Wort mit 2 Buchstaben bekommt also
+// auch bei „viel“ nur einen Tipp, ein Wort mit 20 Buchstaben entsprechend mehr.
+function drHintCount(letters, setting) {
+  const share = DR_HINT_SHARE[setting] || 0;
+  if (!share || letters < 2) return 0;
+  return Math.min(Math.floor(letters / 2), Math.max(1, Math.round(letters * share)));
+}
 const DR_TIMES = [60, 80, 100, 120, 150];
 const DR_CHOOSE_MS = 15000; // Zeit zum Wort-Aussuchen
 const DR_TURN_END_MS = 6000; // Anzeige des Wortes nach einem Zug
@@ -1433,6 +1444,8 @@ function drStart(lobby) {
     names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
     rounds: st.rounds,
     time: st.time,
+    hints: st.hints,
+    level: st.level,
     round: 1,
     turnIdx: -1,
     turnNo: 0,
@@ -1473,8 +1486,9 @@ function drNextTurn(lobby) {
   g.turnPoints = null;
   g.ops = [];
   g.points = 0;
-  let pool = DRAW_WORDS.filter((w) => !g.usedWords.has(w));
-  if (pool.length < 3) pool = DRAW_WORDS;
+  const all = DRAW_POOLS[g.level] || DRAW_POOLS.mittel;
+  let pool = all.filter((w) => !g.usedWords.has(w));
+  if (pool.length < 3) pool = all;
   g.choices = shuffle(pool).slice(0, 3);
   g.endsAt = Date.now() + DR_CHOOSE_MS;
   drChat(g, { kind: "system", text: `${g.names[g.drawer]} ist dran und sucht ein Wort aus.` });
@@ -1500,12 +1514,15 @@ function drChoose(lobby, index) {
   g.phase = "draw";
   g.startedAt = Date.now();
   g.endsAt = g.startedAt + g.time * 1000;
-  // Hinweise: nach und nach einzelne Buchstaben aufdecken
-  const letters = [...g.word].map((c, i) => (/[a-zäöüß]/i.test(c) ? i : -1)).filter((i) => i >= 0);
-  const hints = Math.min(3, Math.max(0, Math.floor(letters.length / 3)));
+  // Tipps: nach und nach einzelne Buchstaben aufdecken, gleichmäßig verteilt
+  // zwischen 30 % und 90 % der Zeichenzeit
+  const letters = [...g.word].map((c, i) => (/[a-zäöüßàáâéèêíóúñ]/i.test(c) ? i : -1)).filter((i) => i >= 0);
+  const hints = drHintCount(letters.length, g.hints);
   const order = shuffle(letters).slice(0, hints);
-  [0.5, 0.7, 0.85].slice(0, hints).forEach((f, k) => {
-    drSchedule(lobby, g.time * 1000 * f, () => { g.revealed.push(order[k]); });
+  g.hintTotal = hints;
+  order.forEach((idx, k) => {
+    const f = 0.3 + 0.6 * (k + 1) / (hints + 1);
+    drSchedule(lobby, g.time * 1000 * f, () => { g.revealed.push(idx); });
   });
   drSchedule(lobby, g.time * 1000, () => drEndTurn(lobby, "Die Zeit ist um!"));
 }
@@ -1552,6 +1569,10 @@ function drView(lobby, g, me) {
     endsAt: g.endsAt,
     now: Date.now(),
     choices: isDrawer && g.phase === "choose" ? g.choices : null,
+    level: g.level,
+    levelName: DR_LEVEL_NAMES[g.level],
+    hintsShown: g.revealed ? g.revealed.length : 0,
+    hintTotal: g.phase === "draw" ? g.hintTotal || 0 : 0,
     word: g.word ? (knows ? g.word : null) : null,
     mask: g.word ? drMask(g) : null,
     wordLength: g.word ? [...g.word].length : 0,
@@ -1604,6 +1625,14 @@ Object.assign(handlers, {
     if (s.time !== undefined) {
       if (!DR_TIMES.includes(Number(s.time))) fail("Ungültige Zeichenzeit.");
       st.time = Number(s.time);
+    }
+    if (s.hints !== undefined) {
+      if (!(s.hints in DR_HINT_SHARE)) fail("Ungültige Tipp-Einstellung.");
+      st.hints = s.hints;
+    }
+    if (s.level !== undefined) {
+      if (!DR_LEVELS.includes(s.level)) fail("Ungültige Schwierigkeit.");
+      st.level = s.level;
     }
     lobby.drawSettings = st;
     return lobby;

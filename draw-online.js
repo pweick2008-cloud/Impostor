@@ -11,6 +11,8 @@ const DrawOnline = (() => {
   ];
   const SIZES = [0.004, 0.009, 0.016, 0.03];
   const TIMES = [60, 80, 100, 120, 150];
+  const LEVELS = [["einfach", "Einfach"], ["mittel", "Mittel"], ["schwer", "Schwer"], ["sehrschwer", "Sehr schwer"]];
+  const HINTS = [["keine", "Keine"], ["wenig", "Wenig"], ["mittel", "Mittel"], ["viel", "Viel"]];
 
   let state = null;
   let canvas = null;
@@ -36,6 +38,12 @@ const DrawOnline = (() => {
     const host = isHost();
     const st = s.drawSettings;
     $("draw-host-pill").textContent = host ? "Du bist Host" : "Nur der Host kann ändern";
+    for (const [boxId, options, key] of [["draw-levels", LEVELS, "level"], ["draw-hints", HINTS, "hints"]]) {
+      const box = $(boxId);
+      box.innerHTML = "";
+      for (const [id, label] of options) box.appendChild(makeChip(label, st[key] === id, host ? () => sendSettings({ [key]: id }) : null));
+      box.classList.toggle("static", !host);
+    }
     const times = $("draw-times");
     times.innerHTML = "";
     for (const t of TIMES) times.appendChild(makeChip(`${t} s`, st.time === t, host ? () => sendSettings({ time: t }) : null));
@@ -141,7 +149,10 @@ const DrawOnline = (() => {
     } else {
       word.textContent = "Spiel vorbei";
     }
-    $("draw-word-info").textContent = game.phase === "draw" && !game.word ? `${game.wordLength} Buchstaben` : drawer && game.phase === "draw" ? "Du zeichnest" : "";
+    const hintInfo = game.hintTotal ? ` · Tipp ${game.hintsShown} von ${game.hintTotal}` : "";
+    $("draw-word-info").textContent = game.phase === "draw" && !game.word
+      ? `${game.wordLength} Buchstaben${hintInfo}`
+      : drawer && game.phase === "draw" ? `Du zeichnest${hintInfo}` : game.phase === "choose" ? `Schwierigkeit: ${game.levelName}` : "";
 
     clockOffset = game.now - Date.now();
     if (game.endsAt && !over) startClock();
