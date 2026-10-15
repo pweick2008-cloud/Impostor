@@ -75,11 +75,11 @@ let currentGame = "verraeter"; // "verraeter" oder "werbinich"
 let currentMode = "local"; // "local" (Pass & Play) oder "online"
 
 const GAMES = {
-  verraeter: { icon: "", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
-  werbinich: { icon: "", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." },
-  luegen: { icon: "", name: "SPIEGEL", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit." },
-  slf: { icon: "", name: "Stadt Land Fluss", sub: "Ein Buchstabe, eigene Kategorien, Zeitdruck.", onlineOnly: true },
-  draw: { icon: "", name: "Kritzeln", sub: "Einer zeichnet, alle anderen raten.", onlineOnly: true }
+  verraeter: { icon: "", svg: "mask", name: "Verräter", sub: "Einer kennt den Begriff nicht. Findet ihn!" },
+  werbinich: { icon: "", svg: "note", name: "Wer bin ich?", sub: "Alle kennen deine Person – nur du nicht." },
+  luegen: { icon: "", svg: "joker", name: "SPIEGEL", sub: "Karten, Aussagen, Lügen und Fallen – zu zweit." },
+  slf: { icon: "", svg: "map", name: "Stadt Land Fluss", sub: "Ein Buchstabe, eigene Kategorien, Zeitdruck.", onlineOnly: true },
+  draw: { icon: "", svg: "pencil", name: "Kritzeln", sub: "Einer zeichnet, alle anderen raten.", onlineOnly: true }
 };
 
 // Phasen-Anzeige je Spiel und Modus
@@ -122,13 +122,14 @@ function updateSteps(phase) {
 function openGameMenu(gameId) {
   currentGame = gameId;
   const g = GAMES[gameId];
-  $("menu-logo").textContent = g.icon;
+  $("menu-logo").innerHTML = `<svg class="ico"><use href="#ico-${g.svg}"/></svg>`;
   $("menu-title").textContent = g.name;
   $("menu-title").dataset.text = g.name;
   $("menu-sub").textContent = g.sub;
   $("menu-online-note").hidden = true;
   $("menu-local").hidden = !!g.onlineOnly;
   $("menu-only-online").hidden = !g.onlineOnly;
+  $("menu-only-online").textContent = `${g.name} gibt es nur online – jeder spielt auf seinem eigenen Gerät.`;
   showScreen("menu");
 }
 
@@ -145,6 +146,7 @@ function showScreen(name, phase = name) {
       current.classList.remove("leaving");
     }
     updateSteps(phase);
+    document.documentElement.dataset.theme = name === "hub" || window.inviteMode ? "hub" : currentGame;
     next.classList.remove("active");
     void next.offsetWidth; // Animation neu starten
     next.classList.add("active");

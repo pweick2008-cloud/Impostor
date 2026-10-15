@@ -164,6 +164,7 @@
 
   function openOnlineHome(error = "", invited = false) {
     currentMode = "online";
+    window.inviteMode = invited; // Einladung: Spiel noch unbekannt → neutrales Design
     lastScreen = "online";
     showError(error);
     $("on-create-card").hidden = invited;
@@ -189,6 +190,7 @@
   function render() {
     currentMode = "online";
     currentGame = state.gameType;
+    window.inviteMode = false;
     const g = state.game;
     if (g && g.inGame && g.type === "draw") {
       goto(DrawOnline.render(state));
