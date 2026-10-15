@@ -1586,7 +1586,6 @@ function drView(lobby, g, me) {
     choices: isDrawer && g.phase === "choose" ? g.choices : null,
     levels: g.levels,
     levelName: g.levels.length === DR_LEVELS.length ? "alle Stufen" : g.levels.map((l) => DR_LEVEL_NAMES[l]).join(", "),
-    choiceLevels: isDrawer && g.phase === "choose" ? g.choiceLevels.map((l) => DR_LEVEL_NAMES[l]) : null,
     hintsShown: g.revealed ? g.revealed.length : 0,
     hintTotal: g.phase === "draw" ? g.hintTotal || 0 : 0,
     word: g.word ? (knows ? g.word : null) : null,

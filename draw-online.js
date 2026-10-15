@@ -217,9 +217,7 @@ const DrawOnline = (() => {
           const b = document.createElement("button");
           b.type = "button";
           b.className = "btn primary draw-choice";
-          b.innerHTML = `<span></span><small></small>`;
-          b.querySelector("span").textContent = w;
-          b.querySelector("small").textContent = game.choiceLevels ? game.choiceLevels[i] : "";
+          b.textContent = w;
           b.addEventListener("click", () => Online.send({ type: "drChoose", index: i }));
           wrap.appendChild(b);
         });
