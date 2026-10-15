@@ -13,12 +13,13 @@ const { WebSocketServer } = require("ws");
 const { CATEGORIES } = require("./words.js");
 const { shuffle, pick, normalize, levenshtein, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 const { SpiegelRules } = require("./spiegel-rules.js");
+const { DRAW_WORDS } = require("./draw-words.js");
 
 const PORT = process.env.PORT || 3000;
 const MIN_PLAYERS = 3; // Verräter
-const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2, luegen: 2, slf: 1 };
-const MAX_PLAYERS_BY_GAME = { verraeter: 20, werbinich: 20, luegen: 2, slf: 20 };
-const GAME_TYPES = ["verraeter", "werbinich", "luegen", "slf"];
+const MIN_PLAYERS_BY_GAME = { verraeter: 3, werbinich: 2, luegen: 2, slf: 1, draw: 2 };
+const MAX_PLAYERS_BY_GAME = { verraeter: 20, werbinich: 20, luegen: 2, slf: 20, draw: 20 };
+const GAME_TYPES = ["verraeter", "werbinich", "luegen", "slf", "draw"];
 const MAX_PLAYERS = 20;
 const LOBBY_IDLE_MS = 30 * 60 * 1000; // leere Lobbys werden nach 30 Min. gelöscht
 const DIFFICULTIES = ["leicht", "mittel", "schwer", "gemischt"];
@@ -39,7 +40,9 @@ const STATIC = {
   "/spiegel-rules.js": ["spiegel-rules.js", "text/javascript; charset=utf-8"],
   "/spiegel-online.js": ["spiegel-online.js", "text/javascript; charset=utf-8"],
   "/spiegel-local.js": ["spiegel-local.js", "text/javascript; charset=utf-8"],
-  "/slf-online.js": ["slf-online.js", "text/javascript; charset=utf-8"]
+  "/slf-online.js": ["slf-online.js", "text/javascript; charset=utf-8"],
+  "/draw-canvas.js": ["draw-canvas.js", "text/javascript; charset=utf-8"],
+  "/draw-online.js": ["draw-online.js", "text/javascript; charset=utf-8"]
 };
 
 const server = http.createServer((req, res) => {
@@ -130,10 +133,15 @@ function viewFor(lobby, me) {
     maxPlayers: MAX_PLAYERS_BY_GAME[lobby.gameType],
     settings: lobby.settings,
     slfSettings: lobby.slfSettings,
+    drawSettings: lobby.drawSettings,
     players: lobby.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected })),
     game: null
   };
   if (!g) return view;
+  if (g.type === "draw") {
+    view.game = drView(lobby, g, me);
+    return view;
+  }
   if (g.type === "slf") {
     view.game = slfView(lobby, g, me);
     return view;
@@ -353,6 +361,7 @@ function dropFromGame(lobby, id) {
   if (g && g.type === "werbinich") return wbiDrop(lobby, id);
   if (g && g.type === "luegen") return luDrop(lobby, id);
   if (g && g.type === "slf") return slfDrop(lobby, id);
+  if (g && g.type === "draw") return drDrop(lobby, id);
   if (!g || g.phase === "over" || !g.order.includes(id) || g.out.has(id)) return;
   g.out.add(id);
   g.results[id] = "hat das Spiel verlassen";
@@ -422,6 +431,7 @@ const handlers = {
       players: [],
       settings: sanitizeSettings({ ...(msg.settings || {}) }, 1),
       slfSettings: { ...SLF_DEFAULTS, categories: [...SLF_DEFAULTS.categories] },
+      drawSettings: { ...DR_DEFAULTS },
       game: null,
       usedWords: [],
       emptySince: null
@@ -494,7 +504,8 @@ const handlers = {
     const min = MIN_PLAYERS_BY_GAME[lobby.gameType];
     if (lobby.players.length < min) fail(`Ihr braucht mindestens ${min} Spieler.`);
     if (lobby.players.length > MAX_PLAYERS_BY_GAME[lobby.gameType]) fail("Zu viele Spieler für dieses Spiel.");
-    if (lobby.gameType === "slf") slfStart(lobby);
+    if (lobby.gameType === "draw") drStart(lobby);
+    else if (lobby.gameType === "slf") slfStart(lobby);
     else if (lobby.gameType === "luegen") luStart(lobby);
     else if (lobby.gameType === "werbinich") wbiStart(lobby);
     else startGame(lobby);
@@ -1388,6 +1399,315 @@ Object.assign(handlers, {
     requireHost(lobby, me);
     requireGame(lobby, "scores", "slf");
     slfNewRound(lobby);
+    return lobby;
+  }
+});
+
+/* =========================================================
+   Kritzeln – Zeichnen & Raten (nur online, 2 bis 20 Spieler)
+   - Reihum zeichnet jeder einmal pro Runde. Der Zeichner wählt eines von
+     3 Wörtern, die anderen raten im Chat.
+   - Die Striche kommen in kleinen Paketen vom Zeichner und werden sofort
+     an alle anderen weitergeleitet. Der Server merkt sich alle Striche
+     der aktuellen Zeichnung, damit Nachzügler und neu Verbundene sie
+     vollständig bekommen.
+   - Punkte: Wer richtig rät, bekommt 50 bis 200 Punkte – je schneller,
+     desto mehr. Der Zeichner bekommt 50 Punkte pro richtigem Rater.
+   ========================================================= */
+const DR_DEFAULTS = { rounds: 3, time: 80 };
+const DR_TIMES = [60, 80, 100, 120, 150];
+const DR_CHOOSE_MS = 15000; // Zeit zum Wort-Aussuchen
+const DR_TURN_END_MS = 6000; // Anzeige des Wortes nach einem Zug
+const DR_MAX_POINTS = 60000; // Schutz vor riesigen Zeichnungen
+const DR_COLOR = /^#[0-9a-f]{6}$/i;
+
+const drActive = (lobby, g) => g.ids.filter((id) => lobby.players.some((p) => p.id === id));
+const drGuessers = (lobby, g) => drActive(lobby, g).filter((id) => id !== g.drawer);
+
+function drStart(lobby) {
+  const st = lobby.drawSettings;
+  lobby.game = {
+    type: "draw",
+    phase: "choose", // choose → draw → turnEnd → … → over
+    ids: lobby.players.map((p) => p.id),
+    names: Object.fromEntries(lobby.players.map((p) => [p.id, p.name])),
+    rounds: st.rounds,
+    time: st.time,
+    round: 1,
+    turnIdx: -1,
+    turnNo: 0,
+    score: Object.fromEntries(lobby.players.map((p) => [p.id, 0])),
+    usedWords: new Set(),
+    chat: [],
+    ops: [],
+    points: 0
+  };
+  drNextTurn(lobby);
+}
+
+function drChat(g, entry) {
+  g.chat.push({ n: g.chatNo = (g.chatNo || 0) + 1, ...entry });
+  if (g.chat.length > 120) g.chat.splice(0, g.chat.length - 120);
+}
+
+function drNextTurn(lobby) {
+  const g = lobby.game;
+  const active = drActive(lobby, g);
+  if (active.length < 2) return drOver(lobby, "Zu wenige Spieler übrig.");
+  // Nächster Zeichner in Sitzreihenfolge, der noch in der Lobby ist
+  do {
+    g.turnIdx++;
+    if (g.turnIdx >= g.ids.length) {
+      g.turnIdx = 0;
+      g.round++;
+    }
+    if (g.round > g.rounds) return drOver(lobby);
+  } while (!active.includes(g.ids[g.turnIdx]));
+
+  g.turnNo++;
+  g.drawer = g.ids[g.turnIdx];
+  g.phase = "choose";
+  g.word = null;
+  g.revealed = [];
+  g.guessed = new Map(); // ID → Punkte in diesem Zug
+  g.turnPoints = null;
+  g.ops = [];
+  g.points = 0;
+  let pool = DRAW_WORDS.filter((w) => !g.usedWords.has(w));
+  if (pool.length < 3) pool = DRAW_WORDS;
+  g.choices = shuffle(pool).slice(0, 3);
+  g.endsAt = Date.now() + DR_CHOOSE_MS;
+  drChat(g, { kind: "system", text: `${g.names[g.drawer]} ist dran und sucht ein Wort aus.` });
+  drSchedule(lobby, DR_CHOOSE_MS, () => drChoose(lobby, 0));
+}
+
+// Timer, der nur greift, wenn der Zug inzwischen nicht weitergegangen ist
+function drSchedule(lobby, ms, fn) {
+  const g = lobby.game;
+  const turn = g.turnNo;
+  const phase = g.phase;
+  setTimeout(() => {
+    if (lobby.game !== g || g.turnNo !== turn || g.phase !== phase || !lobbies.has(lobby.code)) return;
+    fn();
+    broadcastState(lobby);
+  }, ms);
+}
+
+function drChoose(lobby, index) {
+  const g = lobby.game;
+  g.word = g.choices[index] || g.choices[0];
+  g.usedWords.add(g.word);
+  g.phase = "draw";
+  g.startedAt = Date.now();
+  g.endsAt = g.startedAt + g.time * 1000;
+  // Hinweise: nach und nach einzelne Buchstaben aufdecken
+  const letters = [...g.word].map((c, i) => (/[a-zäöüß]/i.test(c) ? i : -1)).filter((i) => i >= 0);
+  const hints = Math.min(3, Math.max(0, Math.floor(letters.length / 3)));
+  const order = shuffle(letters).slice(0, hints);
+  [0.5, 0.7, 0.85].slice(0, hints).forEach((f, k) => {
+    drSchedule(lobby, g.time * 1000 * f, () => { g.revealed.push(order[k]); });
+  });
+  drSchedule(lobby, g.time * 1000, () => drEndTurn(lobby, "Die Zeit ist um!"));
+}
+
+function drEndTurn(lobby, reason) {
+  const g = lobby.game;
+  if (g.phase !== "draw" && g.phase !== "choose") return;
+  const guessers = g.guessed.size;
+  const drawerPts = g.phase === "draw" ? guessers * 50 : 0;
+  g.turnPoints = Object.fromEntries(g.ids.map((id) => [id, g.guessed.get(id) || 0]));
+  g.turnPoints[g.drawer] = drawerPts;
+  g.score[g.drawer] += drawerPts;
+  g.phase = "turnEnd";
+  g.endsAt = Date.now() + DR_TURN_END_MS;
+  g.turnReason = reason;
+  if (g.word) drChat(g, { kind: "system", text: `Das Wort war „${g.word}“.` });
+  drSchedule(lobby, DR_TURN_END_MS, () => drNextTurn(lobby));
+}
+
+function drOver(lobby, reason) {
+  const g = lobby.game;
+  g.phase = "over";
+  g.endsAt = null;
+  g.overReason = reason || "";
+}
+
+// Maskiertes Wort für Rater: Unterstriche, aufgedeckte Hinweise, Leer- und Bindestriche bleiben sichtbar
+function drMask(g) {
+  return [...g.word].map((c, i) => (/[\s-]/.test(c) ? c : g.revealed.includes(i) ? c : "_")).join("");
+}
+
+function drView(lobby, g, me) {
+  const isDrawer = me.id === g.drawer;
+  const knows = isDrawer || g.guessed.has(me.id) || g.phase === "turnEnd" || g.phase === "over";
+  return {
+    type: "draw",
+    phase: g.phase,
+    inGame: g.ids.includes(me.id),
+    round: g.round,
+    rounds: g.rounds,
+    time: g.time,
+    turnKey: `${g.turnNo}`,
+    drawer: g.drawer,
+    endsAt: g.endsAt,
+    now: Date.now(),
+    choices: isDrawer && g.phase === "choose" ? g.choices : null,
+    word: g.word ? (knows ? g.word : null) : null,
+    mask: g.word ? drMask(g) : null,
+    wordLength: g.word ? [...g.word].length : 0,
+    guessed: [...g.guessed.keys()],
+    turnPoints: g.turnPoints,
+    turnReason: g.phase === "turnEnd" ? g.turnReason : null,
+    overReason: g.overReason || "",
+    players: g.ids.map((id) => {
+      const p = lobby.players.find((x) => x.id === id);
+      return { id, name: g.names[id], connected: !!(p && p.connected), left: !p, score: g.score[id] };
+    }),
+    // Jeder sieht nur die Chatnachrichten, die für ihn bestimmt sind
+    chat: g.chat.filter((m) => !m.to || m.to.includes(me.id)).slice(-60).map(({ to, ...m }) => m)
+  };
+}
+
+function drDrop(lobby, id) {
+  const g = lobby.game;
+  if (g.phase === "over") return;
+  drChat(g, { kind: "system", text: `${g.names[id]} hat das Spiel verlassen.` });
+  if (drActive(lobby, g).length < 2) return drOver(lobby, "Zu wenige Spieler übrig.");
+  if (id === g.drawer && (g.phase === "choose" || g.phase === "draw")) return drEndTurn(lobby, "Der Zeichner hat das Spiel verlassen.");
+  if (g.phase === "draw" && drGuessers(lobby, g).every((x) => g.guessed.has(x))) drEndTurn(lobby, "Alle haben das Wort erraten!");
+}
+
+function drRequireDrawer(lobby, me, phase) {
+  const g = requireGame(lobby, phase, "draw");
+  if (g.drawer !== me.id) fail("Du zeichnest gerade nicht.");
+  return g;
+}
+
+// Zeichnungs-Ereignis an alle außer den Zeichner weitergeben
+function drRelay(lobby, g, op) {
+  for (const p of lobby.players) if (p.ws && p.id !== g.drawer) send(p.ws, { type: "drawOp", key: `${g.turnNo}`, op });
+}
+
+const drNum = (v) => Math.round(Math.min(1, Math.max(0, Number(v) || 0)) * 10000) / 10000;
+
+Object.assign(handlers, {
+  drSettings(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    if (lobby.game && lobby.game.phase !== "over") fail("Während des Spiels können die Einstellungen nicht geändert werden.");
+    const st = { ...lobby.drawSettings };
+    const s = msg.settings || {};
+    if (s.rounds !== undefined) {
+      const r = Number(s.rounds);
+      if (!Number.isInteger(r) || r < 1 || r > 10) fail("Die Rundenzahl muss zwischen 1 und 10 liegen.");
+      st.rounds = r;
+    }
+    if (s.time !== undefined) {
+      if (!DR_TIMES.includes(Number(s.time))) fail("Ungültige Zeichenzeit.");
+      st.time = Number(s.time);
+    }
+    lobby.drawSettings = st;
+    return lobby;
+  },
+
+  drChoose(ws, msg, lobby, me) {
+    drRequireDrawer(lobby, me, "choose");
+    const i = Number(msg.index);
+    if (![0, 1, 2].includes(i)) fail("Ungültige Auswahl.");
+    drChoose(lobby, i);
+    return lobby;
+  },
+
+  // Strich-Paket, Füllung, Rückgängig oder Leeren – nur vom Zeichner
+  drOp(ws, msg, lobby, me) {
+    const g = drRequireDrawer(lobby, me, "draw");
+    const op = msg.op || {};
+    if (op.k === "s") {
+      const id = String(op.id || "").slice(0, 24);
+      const pts = (Array.isArray(op.pts) ? op.pts : []).slice(0, 400)
+        .map((q) => [drNum(q[0]), drNum(q[1]), drNum(q[2] === undefined ? 0.5 : q[2])]);
+      if (!id || !pts.length) return null;
+      if (g.points + pts.length > DR_MAX_POINTS) fail("Die Zeichnung ist zu groß – bitte leeren.");
+      g.points += pts.length;
+      let stroke = g.ops.find((o) => o.k === "s" && o.id === id);
+      if (!stroke) {
+        const color = DR_COLOR.test(op.c) ? op.c : "#111111";
+        const size = Math.min(0.08, Math.max(0.001, Number(op.w) || 0.01));
+        stroke = { k: "s", id, c: color, w: size, t: op.t === "eraser" ? "eraser" : "pen", pts: [] };
+        g.ops.push(stroke);
+      }
+      stroke.pts.push(...pts);
+      drRelay(lobby, g, { k: "s", id, c: stroke.c, w: stroke.w, t: stroke.t, pts });
+    } else if (op.k === "f") {
+      if (!DR_COLOR.test(op.c)) fail("Ungültige Farbe.");
+      const fill = { k: "f", id: String(op.id || "").slice(0, 24), x: drNum(op.x), y: drNum(op.y), c: op.c };
+      g.ops.push(fill);
+      drRelay(lobby, g, fill);
+    } else if (op.k === "undo") {
+      const id = String(op.id || "");
+      const idx = g.ops.findIndex((o) => o.id === id);
+      if (idx >= 0) {
+        if (g.ops[idx].pts) g.points -= g.ops[idx].pts.length;
+        g.ops.splice(idx, 1);
+        drRelay(lobby, g, { k: "undo", id });
+      }
+    } else if (op.k === "clear") {
+      g.ops = [];
+      g.points = 0;
+      drRelay(lobby, g, { k: "clear" });
+    }
+    return null; // kein komplettes Status-Update nötig
+  },
+
+  // Vollständige Zeichnung für einen Spieler (nach Neuladen oder Verbindungsabbruch)
+  drSync(ws, msg, lobby, me) {
+    const g = lobby.game;
+    if (!g || g.type !== "draw") return null;
+    send(ws, { type: "drawSync", key: `${g.turnNo}`, ops: g.ops });
+    return null;
+  },
+
+  drGuess(ws, msg, lobby, me) {
+    const g = requireGame(lobby, lobby.game && lobby.game.phase, "draw");
+    const text = String(msg.text || "").trim().replace(/\s+/g, " ").slice(0, 80);
+    if (!text) return null;
+    const isDrawer = me.id === g.drawer;
+    const knows = isDrawer || g.guessed.has(me.id);
+
+    if (g.phase === "draw" && !knows) {
+      const a = normalize(text);
+      const b = normalize(g.word);
+      if (a === b) {
+        const left = Math.max(0, g.endsAt - Date.now());
+        const pts = 50 + Math.round(150 * left / (g.time * 1000));
+        g.guessed.set(me.id, pts);
+        g.score[me.id] += pts;
+        drChat(g, { kind: "correct", text: `${me.name} hat das Wort erraten!` });
+        if (drGuessers(lobby, g).every((x) => g.guessed.has(x))) drEndTurn(lobby, "Alle haben das Wort erraten!");
+        return lobby;
+      }
+      if (b.length >= 4 && levenshtein(a, b) <= 1) {
+        drChat(g, { kind: "close", text: `„${text}“ ist knapp daneben!`, to: [me.id] });
+        return lobby;
+      }
+      drChat(g, { kind: "msg", name: me.name, id: me.id, text });
+      return lobby;
+    }
+
+    // Wer das Wort kennt, schreibt während des Zeichnens nur für andere Wissende
+    if (g.phase === "draw" && knows) {
+      if (isDrawer) fail("Der Zeichner kann während des Zeichnens nicht schreiben.");
+      drChat(g, { kind: "msg", name: me.name, id: me.id, text, to: [g.drawer, ...g.guessed.keys()] });
+      return lobby;
+    }
+    drChat(g, { kind: "msg", name: me.name, id: me.id, text });
+    return lobby;
+  },
+
+  drSkip(ws, msg, lobby, me) {
+    requireHost(lobby, me);
+    const g = lobby.game;
+    if (!g || g.type !== "draw" || !["choose", "draw"].includes(g.phase)) fail("Das geht gerade nicht.");
+    drEndTurn(lobby, "Der Host hat den Zug übersprungen.");
     return lobby;
   }
 });

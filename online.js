@@ -63,6 +63,7 @@
 
     ws.onopen = () => {
       retry = 0;
+      if (typeof DrawOnline !== "undefined") DrawOnline.onReconnect();
       $("conn-banner").hidden = true;
       if (pending) {
         ws.send(JSON.stringify(pending));
@@ -149,6 +150,9 @@
         break;
       case "left":
         break;
+      default:
+        // Live-Zeichnung bei Kritzeln
+        if (typeof DrawOnline !== "undefined") DrawOnline.handleMessage(msg);
     }
   }
 
@@ -172,10 +176,11 @@
 
   function goto(screen) {
     if (screen === lastScreen) return;
+    if (screen !== "draw-game" && typeof DrawOnline !== "undefined") DrawOnline.release();
     if (screen === "o-reveal") roleShown = false;
     if (screen === "o-game") myRoleShown = false;
     lastScreen = screen;
-    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game", "lu-setup": "trap", "lu-game": "game", "slf-write": "write", "slf-review": "review", "slf-scores": "scores" }[screen];
+    const phase = { lobby: "setup", "o-reveal": "reveal", "o-game": "game", "wo-assign": "assign", "wo-game": "game", "lu-setup": "trap", "lu-game": "game", "slf-write": "write", "slf-review": "review", "slf-scores": "scores", "draw-game": "game" }[screen];
     showScreen(screen, phase);
   }
 
@@ -185,7 +190,9 @@
     currentMode = "online";
     currentGame = state.gameType;
     const g = state.game;
-    if (g && g.inGame && g.type === "slf") {
+    if (g && g.inGame && g.type === "draw") {
+      goto(DrawOnline.render(state));
+    } else if (g && g.inGame && g.type === "slf") {
       goto(SLFOnline.render(state));
     } else if (g && g.inGame && g.type === "luegen") {
       goto(LUOnline.render(state));
@@ -263,6 +270,8 @@
     $("lobby-settings").hidden = state.gameType !== "verraeter";
     $("slf-settings").hidden = state.gameType !== "slf";
     if (state.gameType === "slf") SLFOnline.renderLobbySettings(state);
+    $("draw-settings").hidden = state.gameType !== "draw";
+    if (state.gameType === "draw") DrawOnline.renderLobbySettings(state);
     const enough = state.players.length >= state.minPlayers;
     $("lobby-start").hidden = !host;
     $("lobby-start").disabled = !enough;
@@ -539,6 +548,7 @@
       cancel: "Bleiben"
     });
     if (!ok) return;
+    if (typeof DrawOnline !== "undefined") DrawOnline.release();
     setSession(null);
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "leave" }));
     state = null;

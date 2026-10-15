@@ -742,3 +742,91 @@ h1, h2, .mode-title, .phase-title, .big-name, .turn-name, .role-word, .role-impo
 .slf-rank-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slf-total { font-family: var(--display); font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .slf-last summary { cursor: pointer; font-weight: 700; }
+
+/* ===== Kritzeln ===== */
+#app:has(#screen-draw-game.active) { max-width: 1120px; }
+html.zoom-locked { touch-action: pan-x pan-y; } /* kein Zwei-Finger- oder Doppeltipp-Zoom */
+
+.draw-top { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; }
+.draw-round { font-family: var(--mono); font-size: .85rem; color: var(--muted); min-width: 4.5em; }
+.draw-word-box { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.draw-word { font-family: var(--display); font-size: 1.5rem; font-weight: 800; overflow-wrap: anywhere; }
+.draw-word.mask { font-family: var(--mono); letter-spacing: .35em; padding-left: .35em; }
+.draw-timer {
+  min-width: 2.6em; height: 2.6em; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; border: 2px solid var(--border);
+}
+.draw-timer:empty { visibility: hidden; }
+.draw-timer.urgent { color: var(--danger); border-color: var(--danger); animation: pulse 1s ease-in-out infinite; }
+
+.draw-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@media (min-width: 900px) {
+  .draw-layout { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+  .draw-side { position: sticky; top: calc(12px + env(safe-area-inset-top, 0px)); }
+  .draw-chat { max-height: 52vh; }
+}
+.draw-main, .draw-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.draw-stage {
+  position: relative; width: 100%; aspect-ratio: 4 / 3; max-width: 100%;
+  border-radius: 16px; overflow: hidden; background: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35), 0 0 0 1px var(--border);
+}
+.draw-canvas {
+  display: block; width: 100%; height: 100%;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.draw-canvas.drawing-enabled { cursor: crosshair; }
+#screen-draw-game.is-drawer .draw-stage { box-shadow: 0 10px 30px rgba(0, 0, 0, .35), 0 0 0 3px var(--primary); }
+
+.draw-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 20px; text-align: center; background: rgba(13, 16, 32, .9); color: var(--text);
+  animation: fade .25s ease both;
+}
+.draw-overlay h2 { margin: 0; font-family: var(--display); font-size: 1.5rem; }
+.draw-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.draw-choices .btn { min-width: 140px; font-size: 1.1rem; }
+.draw-turn-points { list-style: none; margin: 0; padding: 0; width: min(320px, 100%); display: flex; flex-direction: column; gap: 4px; }
+.draw-turn-points li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 8px; background: var(--bg-2); }
+.draw-turn-points strong { font-family: var(--mono); color: var(--primary); }
+
+.draw-tools { gap: 10px; padding: 12px; }
+.draw-colors { display: grid; grid-template-columns: repeat(9, minmax(0, 40px)); gap: 8px; justify-content: start; }
+.draw-color {
+  aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .15);
+  cursor: pointer; padding: 0; transition: transform .1s;
+}
+.draw-color.selected { transform: scale(1.12); box-shadow: 0 0 0 3px var(--primary); }
+.draw-tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.draw-spacer { flex: 1; }
+.draw-sizes { display: flex; gap: 8px; }
+.draw-size {
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-2);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.draw-size span { display: block; border-radius: 50%; background: var(--text); }
+.draw-size.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary); }
+.draw-size-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); }
+.draw-tools [data-tool].selected { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+
+.draw-players { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.draw-player {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--border); font-size: .88rem;
+}
+.draw-player.drawer { border-color: var(--primary); }
+.draw-player.guessed { border-color: var(--success); }
+.draw-player.me .draw-player-name { font-weight: 700; }
+.draw-player.offline { opacity: .5; }
+.draw-player-score { font-family: var(--mono); color: var(--muted); }
+
+.draw-chat-card { gap: 8px; padding: 10px; }
+.draw-chat { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 240px; min-height: 120px; overflow-y: auto; font-size: .92rem; }
+.draw-chat li { padding: 4px 8px; border-radius: 8px; overflow-wrap: anywhere; }
+.chat-system { color: var(--muted); font-size: .85rem; }
+.chat-correct { background: rgba(111, 224, 171, .14); color: var(--success); font-weight: 700; }
+.chat-close { background: rgba(253, 216, 53, .12); color: #f5d76e; }
+.draw-chat-form { display: flex; gap: 8px; }
+.draw-chat-form input { flex: 1; min-width: 0; }
+.draw-result { gap: 10px; }

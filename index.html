@@ -65,6 +65,14 @@
           <span class="mode-tag">Nur online · 1–20 Spieler</span>
         </span>
       </button>
+      <button class="mode-card game-card" type="button" data-game="draw">
+        <span class="mode-icon"></span>
+        <span class="mode-text">
+          <span class="mode-title">Kritzeln</span>
+          <span class="mode-desc">Einer zeichnet, alle anderen raten im Chat. Je schneller, desto mehr Punkte.</span>
+          <span class="mode-tag">Nur online · 2–20 Spieler</span>
+        </span>
+      </button>
     </section>
 
     <!-- ============ MODUSWAHL ============ -->
@@ -590,6 +598,67 @@
       <button class="btn ghost slf-leave" type="button">Lobby verlassen</button>
     </section>
 
+
+    <!-- ============ KRITZELN (NUR ONLINE) ============ -->
+    <section id="screen-draw-game" class="screen">
+      <div class="draw-top card">
+        <span class="draw-round" id="draw-round"></span>
+        <div class="draw-word-box">
+          <span class="draw-word" id="draw-word"></span>
+          <span class="muted small" id="draw-word-info"></span>
+        </div>
+        <span class="draw-timer" id="draw-timer"></span>
+      </div>
+
+      <div id="draw-result" class="card draw-result" hidden>
+        <span class="role-label">Endstand</span>
+        <ol id="draw-final" class="slf-ranking"></ol>
+        <p class="muted small center" id="draw-over-reason"></p>
+        <button id="draw-again" class="btn primary big" type="button">Neues Spiel</button>
+        <button id="draw-to-lobby" class="btn ghost" type="button">Zurück zur Lobby</button>
+        <p id="draw-wait-host" class="muted small center" hidden>Warte auf den Host …</p>
+      </div>
+
+      <div class="draw-layout">
+        <div class="draw-main">
+          <div class="draw-stage">
+            <canvas id="draw-canvas" class="draw-canvas"></canvas>
+            <div id="draw-overlay" class="draw-overlay" hidden></div>
+          </div>
+
+          <div id="draw-tools" class="draw-tools card" hidden>
+            <div id="draw-colors" class="draw-colors"></div>
+            <div class="draw-tool-row">
+              <div id="draw-sizes" class="draw-sizes"></div>
+              <span class="draw-size-dot" id="draw-size-dot"></span>
+            </div>
+            <div class="draw-tool-row">
+              <button type="button" class="btn small-btn" data-tool="pen">Stift</button>
+              <button type="button" class="btn small-btn" data-tool="eraser">Radierer</button>
+              <button type="button" class="btn small-btn" data-tool="fill">Füllen</button>
+              <span class="draw-spacer"></span>
+              <button type="button" class="btn ghost small-btn" id="draw-undo">Rückgängig</button>
+              <button type="button" class="btn ghost small-btn" id="draw-clear">Leeren</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="draw-side">
+          <ul id="draw-players" class="draw-players"></ul>
+          <div class="card draw-chat-card">
+            <ul id="draw-chat" class="draw-chat"></ul>
+            <form id="draw-chat-form" class="draw-chat-form" autocomplete="off">
+              <input id="draw-guess" type="text" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Rate hier das Wort …">
+              <button class="btn primary" type="submit">Senden</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <button id="draw-skip" class="btn ghost" type="button" hidden>Zug überspringen (Host)</button>
+      <button id="draw-leave" class="btn ghost" type="button">Lobby verlassen</button>
+    </section>
+
     <!-- ============ ONLINE: BEITRETEN / ERSTELLEN ============ -->
     <section id="screen-online" class="screen">
       <button class="back-link" type="button" data-back="menu">← Menü</button>
@@ -680,6 +749,23 @@
           <div class="stepper" id="slf-rounds-stepper">
             <button type="button" data-dir="-1" aria-label="Weniger Runden">−</button>
             <span id="slf-rounds">5</span>
+            <button type="button" data-dir="1" aria-label="Mehr Runden">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="draw-settings" hidden>
+        <div class="row-between">
+          <h2>Einstellungen</h2>
+          <span class="pill" id="draw-host-pill"></span>
+        </div>
+        <span class="muted small">Zeit zum Zeichnen</span>
+        <div id="draw-times" class="chips"></div>
+        <div class="row-between">
+          <span>Runden <span class="muted small">(jeder zeichnet einmal pro Runde)</span></span>
+          <div class="stepper" id="draw-rounds-stepper">
+            <button type="button" data-dir="-1" aria-label="Weniger Runden">−</button>
+            <span id="draw-rounds">3</span>
             <button type="button" data-dir="1" aria-label="Mehr Runden">+</button>
           </div>
         </div>
@@ -877,5 +963,7 @@
   <script src="spiegel-online.js"></script>
   <script src="spiegel-local.js"></script>
   <script src="slf-online.js"></script>
+  <script src="draw-canvas.js"></script>
+  <script src="draw-online.js"></script>
 </body>
 </html>

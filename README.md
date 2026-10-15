@@ -1,11 +1,12 @@
 # Partyspiele
 
-Vier Spiele:
+Fünf Spiele:
 
 - **Verräter** – alle kennen einen geheimen Begriff, nur die Verräter nicht. Pass & Play oder online.
 - **Wer bin ich?** – jeder bekommt eine Person, die alle kennen außer ihm selbst. Pass & Play oder online.
 - **SPIEGEL** – Karten, Lügen und Fallen für genau 2 Spieler. Pass & Play oder online.
 - **Stadt Land Fluss** – ein Buchstabe, eigene Kategorien, Zeitdruck. Nur online, 1 bis 20 Spieler.
+- **Kritzeln** – einer zeichnet, alle anderen raten. Nur online, 2 bis 20 Spieler.
 
 Auf der Startseite wählt man das Spiel, danach den Modus:
 
@@ -95,6 +96,16 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 - Gleiche Antworten erkennt das Spiel automatisch – auch mit Groß-/Kleinschreibung, Umlauten und kleinen Tippfehlern. Der Host kann mit **Gleichsetzen** weitere Antworten als gleich werten oder mit **Trennen** eine automatische Zuordnung aufheben.
 - **Punkte:** als Einziger eine gültige Antwort in der Kategorie = **20**, eine Antwort, die kein anderer hat = **10**, gleiche Antwort wie ein anderer = **5**, ungültig oder leer = 0. Die Punkte werden schon während der Auswertung angezeigt.
 - Nach jeder Runde gibt es einen **Punktestand** mit Rundentabelle; nach der letzten Runde den Endstand.
+
+## Kritzeln (nur online, 2–20 Spieler)
+
+- Reihum zeichnet jeder einmal pro Runde. Der Zeichner wählt eines von 3 Wörtern (nach 15 Sekunden wird automatisch gewählt), die anderen raten im Chat. Der Host stellt in der Lobby die Rundenzahl (1–10) und die Zeichenzeit (60–150 Sekunden) ein.
+- Rater sehen das Wort als Lücken; im Laufe der Zeit werden einzelne Buchstaben als Hinweis aufgedeckt. „Knapp daneben“ sieht nur der Rater selbst. Wer das Wort erraten hat, schreibt danach nur noch für andere, die es auch kennen.
+- **Punkte:** 50 bis 200 für richtiges Raten – je schneller, desto mehr. Der Zeichner bekommt 50 Punkte pro richtigem Rater. Der Zug endet, wenn alle erraten haben oder die Zeit abläuft.
+- **Zeichenfeld:** Stift mit 18 Farben und 4 Stärken, Radierer, Füllen, Rückgängig und Leeren. Die Zeichnung wird live an alle übertragen und sieht auf jedem Gerät gleich aus; wer neu lädt, bekommt sie vollständig.
+- **Apple Pencil:** Die Strichstärke folgt dem Druck. Es wird immer nur ein Strich gleichzeitig gezeichnet; sobald der Stift erkannt wurde, werden Finger und Handballen ignoriert. Setzt der Handballen vor dem Stift auf, wird dieser Strich wieder entfernt.
+- **Zoom:** Beim Zeichner wird ein bestehender Zoom zurückgesetzt und Zwei-Finger- sowie Doppeltipp-Zoom gesperrt, solange er zeichnet. Danach ist Zoomen wieder möglich.
+- Die Wortliste (324 Begriffe) steht in `draw-words.js` und liegt nur auf dem Server.
 
 ## Kategorien (Verräter)
 
