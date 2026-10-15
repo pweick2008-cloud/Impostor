@@ -38,12 +38,22 @@ const DrawOnline = (() => {
     const host = isHost();
     const st = s.drawSettings;
     $("draw-host-pill").textContent = host ? "Du bist Host" : "Nur der Host kann ändern";
-    for (const [boxId, options, key] of [["draw-levels", LEVELS, "level"], ["draw-hints", HINTS, "hints"]]) {
-      const box = $(boxId);
-      box.innerHTML = "";
-      for (const [id, label] of options) box.appendChild(makeChip(label, st[key] === id, host ? () => sendSettings({ [key]: id }) : null));
-      box.classList.toggle("static", !host);
+    // Schwierigkeit: mehrere Stufen gleichzeitig wählbar, mindestens eine bleibt an
+    const levelBox = $("draw-levels");
+    levelBox.innerHTML = "";
+    for (const [id, label] of LEVELS) {
+      const on = st.levels.includes(id);
+      levelBox.appendChild(makeChip(label, on, host ? () => {
+        if (on && st.levels.length === 1) return showToast("Mindestens eine Schwierigkeit muss ausgewählt bleiben.");
+        const next = on ? st.levels.filter((l) => l !== id) : [...st.levels, id];
+        sendSettings({ levels: next });
+      } : null));
     }
+    levelBox.classList.toggle("static", !host);
+    const hintBox = $("draw-hints");
+    hintBox.innerHTML = "";
+    for (const [id, label] of HINTS) hintBox.appendChild(makeChip(label, st.hints === id, host ? () => sendSettings({ hints: id }) : null));
+    hintBox.classList.toggle("static", !host);
     const times = $("draw-times");
     times.innerHTML = "";
     for (const t of TIMES) times.appendChild(makeChip(`${t} s`, st.time === t, host ? () => sendSettings({ time: t }) : null));
@@ -206,8 +216,10 @@ const DrawOnline = (() => {
         game.choices.forEach((w, i) => {
           const b = document.createElement("button");
           b.type = "button";
-          b.className = "btn primary";
-          b.textContent = w;
+          b.className = "btn primary draw-choice";
+          b.innerHTML = `<span></span><small></small>`;
+          b.querySelector("span").textContent = w;
+          b.querySelector("small").textContent = game.choiceLevels ? game.choiceLevels[i] : "";
           b.addEventListener("click", () => Online.send({ type: "drChoose", index: i }));
           wrap.appendChild(b);
         });

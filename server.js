@@ -1414,7 +1414,7 @@ Object.assign(handlers, {
    - Punkte: Wer richtig rät, bekommt 50 bis 200 Punkte – je schneller,
      desto mehr. Der Zeichner bekommt 50 Punkte pro richtigem Rater.
    ========================================================= */
-const DR_DEFAULTS = { rounds: 3, time: 80, hints: "mittel", level: "mittel" };
+const DR_DEFAULTS = { rounds: 3, time: 80, hints: "mittel", levels: ["mittel"] };
 // Anteil der Buchstaben, die als Tipp aufgedeckt werden
 const DR_HINT_SHARE = { keine: 0, wenig: 0.15, mittel: 0.3, viel: 0.45 };
 
@@ -1445,7 +1445,7 @@ function drStart(lobby) {
     rounds: st.rounds,
     time: st.time,
     hints: st.hints,
-    level: st.level,
+    levels: [...st.levels],
     round: 1,
     turnIdx: -1,
     turnNo: 0,
@@ -1486,10 +1486,7 @@ function drNextTurn(lobby) {
   g.turnPoints = null;
   g.ops = [];
   g.points = 0;
-  const all = DRAW_POOLS[g.level] || DRAW_POOLS.mittel;
-  let pool = all.filter((w) => !g.usedWords.has(w));
-  if (pool.length < 3) pool = all;
-  g.choices = shuffle(pool).slice(0, 3);
+  g.choices = drPickChoices(g);
   g.endsAt = Date.now() + DR_CHOOSE_MS;
   drChat(g, { kind: "system", text: `${g.names[g.drawer]} ist dran und sucht ein Wort aus.` });
   drSchedule(lobby, DR_CHOOSE_MS, () => drChoose(lobby, 0));
@@ -1505,6 +1502,24 @@ function drSchedule(lobby, ms, fn) {
     fn();
     broadcastState(lobby);
   }, ms);
+}
+
+// Drei Vorschläge: Für jeden wird zuerst eine der gewählten Stufen ausgelost
+// (alle gleich wahrscheinlich – egal wie viele Begriffe eine Stufe hat),
+// danach ein noch nicht benutzter Begriff aus dieser Stufe.
+function drPickChoices(g) {
+  const choices = [];
+  const levels = [];
+  for (let k = 0; k < 3; k++) {
+    const level = pick(g.levels);
+    const all = DRAW_POOLS[level];
+    let pool = all.filter((w) => !g.usedWords.has(w) && !choices.includes(w));
+    if (!pool.length) pool = all.filter((w) => !choices.includes(w)); // Stufe aufgebraucht → wieder von vorn
+    choices.push(pick(pool));
+    levels.push(level);
+  }
+  g.choiceLevels = levels;
+  return choices;
 }
 
 function drChoose(lobby, index) {
@@ -1569,8 +1584,9 @@ function drView(lobby, g, me) {
     endsAt: g.endsAt,
     now: Date.now(),
     choices: isDrawer && g.phase === "choose" ? g.choices : null,
-    level: g.level,
-    levelName: DR_LEVEL_NAMES[g.level],
+    levels: g.levels,
+    levelName: g.levels.length === DR_LEVELS.length ? "alle Stufen" : g.levels.map((l) => DR_LEVEL_NAMES[l]).join(", "),
+    choiceLevels: isDrawer && g.phase === "choose" ? g.choiceLevels.map((l) => DR_LEVEL_NAMES[l]) : null,
     hintsShown: g.revealed ? g.revealed.length : 0,
     hintTotal: g.phase === "draw" ? g.hintTotal || 0 : 0,
     word: g.word ? (knows ? g.word : null) : null,
@@ -1630,9 +1646,10 @@ Object.assign(handlers, {
       if (!(s.hints in DR_HINT_SHARE)) fail("Ungültige Tipp-Einstellung.");
       st.hints = s.hints;
     }
-    if (s.level !== undefined) {
-      if (!DR_LEVELS.includes(s.level)) fail("Ungültige Schwierigkeit.");
-      st.level = s.level;
+    if (s.levels !== undefined) {
+      const levels = DR_LEVELS.filter((l) => Array.isArray(s.levels) && s.levels.includes(l));
+      if (!levels.length) fail("Wähle mindestens eine Schwierigkeit.");
+      st.levels = levels;
     }
     lobby.drawSettings = st;
     return lobby;
