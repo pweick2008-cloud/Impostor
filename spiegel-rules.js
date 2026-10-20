@@ -9,6 +9,7 @@ const SpiegelRules = (() => {
   const ROUNDS = 8;
   const JOKERS = 2;
   const TRAP_POINTS = { 1: 9, 2: 6, 3: 3 };
+  const JACKPOT = 10;
 
   function newGame(names, starter) {
     return {
@@ -57,12 +58,12 @@ const SpiegelRules = (() => {
     if (diff === 0) lines.push(`Gleiche Karten (${a}) – keine Punkte.`);
     else if (diff === 1) {
       const lo = a < d ? att : def;
-      gain[lo.id] += a + d;
-      lines.push(`Differenz 1: ${lo.name} gewinnt mit der niedrigeren Karte die Summe ${a + d}.`);
+      gain[lo.id] += JACKPOT;
+      lines.push(`Differenz 1: ${lo.name} knackt mit der niedrigeren Karte den Jackpot: ${JACKPOT} Punkte.`);
     } else {
       const hi = a > d ? att : def;
-      gain[hi.id] += Math.max(a, d);
-      lines.push(`${hi.name} gewinnt mit der höheren Karte ${Math.max(a, d)} Punkte.`);
+      gain[hi.id] += diff;
+      lines.push(`${hi.name} gewinnt mit der höheren Karte die Differenz: ${diff} Punkte.`);
     }
 
     // 2. Lüge und Lügenjoker

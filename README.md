@@ -79,7 +79,7 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 - Es gibt **8 Runden**, die Rollen wechseln jede Runde.
 - Wer zuerst legt, wählt verdeckt eine Karte und nennt **3 Zahlen** („meine Karte ist eine davon“). Ist die Karte nicht dabei, ist es eine **Lüge** – das erkennt das Spiel automatisch.
 - Der andere kann den **Lügenjoker** einschalten und legt dann seine Karte. Beide Karten werden aufgedeckt.
-- **Karten:** Differenz ≥ 2 → die höhere Karte gewinnt ihren Wert. Differenz 1 → die niedrigere Karte gewinnt die Summe beider Karten. Gleiche Karten → keine Punkte.
+- **Karten:** Differenz ≥ 2 → die höhere Karte gewinnt die Differenz beider Karten (9 gegen 3 = 6 Punkte). Differenz 1 → die niedrigere Karte knackt den Jackpot: fest 10 Punkte. Gleiche Karten → keine Punkte.
 - **Lügenjoker richtig:** Der Lügner bekommt in dieser Runde **0 Punkte** (auch keine Fallenpunkte), der Entlarver **+2**.
 - **Lügenjoker falsch:** **−2** für den, der ihn eingesetzt hat.
 - **Unentdeckte Lüge:** **+2**, solange der Gegner noch Lügenjoker hat.
