@@ -20,7 +20,8 @@ const settings = {
   impostors: 1,
   category: "laender",
   difficulty: "leicht",
-  hint: true
+  hint: true,
+  wordHint: false
 };
 
 let game = null;
@@ -276,6 +277,7 @@ function renderSetup() {
   }
 
   $("opt-hint").checked = settings.hint;
+  $("opt-wordhint").checked = settings.wordHint;
   $("setup-error").hidden = true;
 }
 
@@ -301,6 +303,21 @@ function onStep(e) {
   clampImpostors();
   saveSettings();
   renderSetup();
+}
+
+let hintsLoading = null;
+function loadVerraeterHints() {
+  if (typeof VERRAETER_HINTS !== "undefined") return Promise.resolve();
+  if (!hintsLoading) {
+    hintsLoading = new Promise((resolve, reject) => {
+      const el = document.createElement("script");
+      el.src = "verraeter-hints.js";
+      el.onload = resolve;
+      el.onerror = () => { hintsLoading = null; reject(new Error("Hinweise nicht geladen")); };
+      document.head.appendChild(el);
+    });
+  }
+  return hintsLoading;
 }
 
 function setupError(msg) {
@@ -336,6 +353,7 @@ function startGame() {
     players,
     entry,
     word: displayWord(entry),
+    hint: null,
     categoryId: catId,
     category,
     order: shuffle(players), // zufällige Reihenfolge beim Aufdecken
@@ -346,6 +364,11 @@ function startGame() {
     over: false
   };
 
+  // Hinweisliste erst jetzt nachladen – vorher braucht sie niemand
+  const hintReady = !settings.wordHint ? Promise.resolve() : loadVerraeterHints()
+    .then(() => { game.hint = verraeterHint(catId, game.word); })
+    .catch(() => { /* ohne Hinweis spielen */ });
+
   showPhase({
     num: 2,
     icon: "",
@@ -353,7 +376,7 @@ function startGame() {
     text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${settings.impostors} Verräter.`,
     button: "Los geht's",
     phase: "reveal"
-  }).then(() => {
+  }).then(() => hintReady).then(() => {
     renderReveal();
     showScreen("reveal");
   });
@@ -386,6 +409,7 @@ function renderReveal() {
       <span class="role-label">${escapeHtml(p.name)}, du bist</span>
       <span class="role-impostor">VERRÄTER</span>
       ${settings.hint ? `<span class="small muted">Kategorie: ${escapeHtml(game.category.icon + " " + game.category.name)}</span>` : ""}
+      ${game.hint ? `<span class="role-hint">Hinweis: ${escapeHtml(game.hint)}</span>` : ""}
       <span class="small muted">Lass dir nichts anmerken und finde den Begriff heraus!</span>
       <span class="next-hint">${nextText}</span>`;
   } else {
@@ -794,6 +818,8 @@ function endGame(winner, reason) {
   $("end-reason").textContent = reason;
   $("end-word").textContent = game.word;
   $("end-category").textContent = `${game.category.icon} ${game.category.name}`;
+  $("end-hint").hidden = !game.hint;
+  $("end-hint").textContent = game.hint ? `Hinweis für den Verräter: ${game.hint}` : "";
 
   $("screen-game").classList.add("over");
   banner.hidden = false;
@@ -846,6 +872,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".stepper").forEach((s) => s.addEventListener("click", onStep));
   $("opt-hint").addEventListener("change", (e) => { settings.hint = e.target.checked; saveSettings(); });
+  $("opt-wordhint").addEventListener("change", (e) => { settings.wordHint = e.target.checked; saveSettings(); });
   $("btn-start").addEventListener("click", startGame);
   $("reveal-card").addEventListener("click", onRevealTap);
 

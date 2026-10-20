@@ -13,6 +13,7 @@ const { WebSocketServer } = require("ws");
 const { CATEGORIES } = require("./words.js");
 const { shuffle, pick, normalize, levenshtein, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 const { SpiegelRules } = require("./spiegel-rules.js");
+const { verraeterHint } = require("./verraeter-hints.js");
 const { DRAW_POOLS, LEVELS: DR_LEVELS, LEVEL_NAMES: DR_LEVEL_NAMES } = require("./draw-words.js");
 
 const PORT = process.env.PORT || 3000;
@@ -42,7 +43,8 @@ const STATIC = {
   "/spiegel-local.js": ["spiegel-local.js", "text/javascript; charset=utf-8"],
   "/slf-online.js": ["slf-online.js", "text/javascript; charset=utf-8"],
   "/draw-canvas.js": ["draw-canvas.js", "text/javascript; charset=utf-8"],
-  "/draw-online.js": ["draw-online.js", "text/javascript; charset=utf-8"]
+  "/draw-online.js": ["draw-online.js", "text/javascript; charset=utf-8"],
+  "/verraeter-hints.js": ["verraeter-hints.js", "text/javascript; charset=utf-8"]
 };
 
 const server = http.createServer((req, res) => {
@@ -101,7 +103,8 @@ function sanitizeSettings(input, playerCount) {
     category: CATEGORIES[input.category] || input.category === "zufall" ? input.category : "laender",
     difficulty: DIFFICULTIES.includes(input.difficulty) ? input.difficulty : "leicht",
     impostors: Math.max(1, Math.floor(Number(input.impostors) || 1)),
-    hint: input.hint !== false
+    hint: input.hint !== false,
+    wordHint: input.wordHint === true
   };
   s.impostors = Math.min(s.impostors, Math.max(1, Math.max(playerCount, MIN_PLAYERS) - 1));
   return s;
@@ -168,6 +171,8 @@ function viewFor(lobby, me) {
           impostor: meImpostor,
           word: meImpostor ? null : g.word,
           category: meImpostor && !lobby.settings.hint ? null : categoryLabel,
+          // Den Hinweis bekommen nur Verräter – Crew-Geräte sehen ihn nie
+          hint: meImpostor && lobby.settings.wordHint ? g.hint : null,
           out: g.out.has(me.id)
         }
       : null,
@@ -199,7 +204,7 @@ function viewFor(lobby, me) {
       : null,
     impostorsLeft: activeIds(g).filter((id) => g.impostors.has(id)).length,
     log: g.log,
-    result: over ? { winner: g.winner, reason: g.reason, word: g.word, category: categoryLabel } : null
+    result: over ? { winner: g.winner, reason: g.reason, word: g.word, category: categoryLabel, hint: lobby.settings.wordHint ? g.hint : null } : null
   };
   return view;
 }
@@ -254,6 +259,7 @@ function startGame(lobby) {
     phase: "reveal",
     entry,
     word: displayWord(entry),
+    hint: verraeterHint(catId, displayWord(entry)),
     categoryId: catId,
     category,
     order: ids, // Sitzreihenfolge = Reihenfolge in der Lobby

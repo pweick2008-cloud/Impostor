@@ -156,6 +156,10 @@
           <input type="checkbox" id="opt-hint" checked>
           <span>Verräter sieht die Kategorie</span>
         </label>
+        <label class="toggle">
+          <input type="checkbox" id="opt-wordhint">
+          <span>Verräter bekommt einen vagen Hinweis</span>
+        </label>
       </div>
 
       <p id="setup-error" class="error" hidden></p>
@@ -195,6 +199,7 @@
           <span class="role-label">Der Begriff war</span>
           <span class="word-reveal" id="end-word"></span>
           <span class="muted small" id="end-category"></span>
+          <span class="muted small" id="end-hint" hidden></span>
         </div>
         <div class="result-actions">
           <button id="btn-again" class="btn primary big" type="button">Neue Runde (gleiche Spieler)</button>
@@ -738,6 +743,10 @@
           <input type="checkbox" id="lobby-hint">
           <span>Verräter sieht die Kategorie</span>
         </label>
+        <label class="toggle">
+          <input type="checkbox" id="lobby-wordhint">
+          <span>Verräter bekommt einen vagen Hinweis</span>
+        </label>
       </div>
 
       <div class="card" id="slf-settings" hidden>
@@ -821,6 +830,7 @@
           <span class="role-label">Der Begriff war</span>
           <span class="word-reveal" id="o-end-word"></span>
           <span class="muted small" id="o-end-category"></span>
+          <span class="muted small" id="o-end-hint" hidden></span>
         </div>
         <div class="result-actions">
           <button id="o-again" class="btn primary big" type="button">Neue Runde</button>

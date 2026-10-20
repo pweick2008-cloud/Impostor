@@ -16,7 +16,7 @@ Auf der Startseite wählt man das Spiel, danach den Modus:
 ## Ablauf
 Das Spiel läuft in drei Phasen (oben als Fortschrittsanzeige sichtbar). Zwischen den Phasen erscheint jeweils ein animierter Übergangsbildschirm.
 
-1. **Start:** Spieleranzahl (3–20) und Namen, Anzahl der Verräter, Kategorie und Schwierigkeit wählen.
+1. **Start:** Spieleranzahl (3–20) und Namen, Anzahl der Verräter, Kategorie und Schwierigkeit wählen. Optional sieht der Verräter die Kategorie und/oder bekommt einen **vagen Hinweis** (siehe unten).
 2. **Rollen verteilen:** Ein zufälliger Spielername wird angezeigt. Dieser Spieler nimmt das Gerät, tippt auf seinen Namen und sieht seine Rolle (Begriff oder „IMPOSTER“). Erneut tippen → nächster Spieler.
 3. **Spielrunde** (Tipps, Votes und Ergebnis auf einer Seite):
    - Jeder Spieler hat ein Profil, auf dem seine Tipps stehen. Reihum gibt der Spieler, der am Zug ist, einen Tipp ins Textfeld ein.
@@ -117,3 +117,9 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 Länder · Städte · Automarken · Historische Persönlichkeiten · Politiker · Schauspieler · Musiker & Bands · Deutsche Streamer · Obst & Gemüse · Tiere · Fußballer · Sportler (ohne Fußball) · Sehenswürdigkeiten · Berufe · Modemarken · Lebensmittelmarken · Techmarken · Firmen · Filme & Serien · Animes
 
 Eigene Begriffe lassen sich in `words.js` ergänzen – Browser und Server benutzen dieselbe Datei.
+
+### Hinweis für den Verräter
+
+Wenn die Einstellung „Verräter bekommt einen vagen Hinweis“ an ist, sieht der Verräter auf seiner Rollenkarte ein Stichwort zum Begriff, zum Beispiel *Linksverkehr* bei Großbritannien. Der Hinweis passt absichtlich auch zu mehreren anderen Begriffen der Kategorie. Er nennt nie das bekannteste Merkmal, keinen Slogan, kein Logo und keinen Namensteil. Am Ende der Runde sehen alle, welcher Hinweis es war.
+
+Die Hinweise stehen in `verraeter-hints.js` (Schlüssel: Kategorie-ID und angezeigter Begriff). Online kennt sie nur der Server: Er schickt den Hinweis allein an die Verräter, sonst ließe sich der Begriff in der Liste nachschlagen. Bei Pass & Play wird die Datei erst beim Spielstart nachgeladen. Ein neuer Begriff in `words.js` braucht dort auch einen Hinweis, sonst spielt der Verräter ohne.

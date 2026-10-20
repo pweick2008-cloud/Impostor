@@ -267,6 +267,8 @@
 
     $("lobby-hint").checked = s.hint;
     $("lobby-hint").disabled = !host;
+    $("lobby-wordhint").checked = !!s.wordHint;
+    $("lobby-wordhint").disabled = !host;
 
     $("lobby-game").textContent = `${GAMES[state.gameType].icon} ${GAMES[state.gameType].name} · Code zum Beitreten`;
     $("lobby-settings").hidden = state.gameType !== "verraeter";
@@ -316,6 +318,7 @@
         <span class="role-label">Du bist</span>
         <span class="role-impostor">VERRÄTER</span>
         ${me.category ? `<span class="small muted">Kategorie: ${escapeHtml(me.category)}</span>` : ""}
+        ${me.hint ? `<span class="role-hint">Hinweis: ${escapeHtml(me.hint)}</span>` : ""}
         ${compact ? "" : `<span class="small muted">Lass dir nichts anmerken und finde den Begriff heraus!</span>`}`;
     }
     return `
@@ -390,6 +393,8 @@
       $("o-end-reason").textContent = `${r.reason} ${meWon ? "Du hast gewonnen!" : "Du hast verloren."}`;
       $("o-end-word").textContent = r.word;
       $("o-end-category").textContent = r.category;
+      $("o-end-hint").hidden = !r.hint;
+      $("o-end-hint").textContent = r.hint ? `Hinweis für den Verräter: ${r.hint}` : "";
       $("o-again").hidden = !host;
       $("o-to-lobby").hidden = !host;
       $("o-wait-host").hidden = host;
@@ -407,7 +412,7 @@
     myrole.classList.toggle("impostor", myRoleShown && g.me.impostor);
     myrole.innerHTML = myRoleShown
       ? (g.me.impostor
-        ? `<span>Du bist <strong>Verräter</strong>${g.me.category ? ` · ${escapeHtml(g.me.category)}` : ""}</span>`
+        ? `<span>Du bist <strong>Verräter</strong>${g.me.category ? ` · ${escapeHtml(g.me.category)}` : ""}${g.me.hint ? ` · Hinweis: ${escapeHtml(g.me.hint)}` : ""}</span>`
         : `<span>Dein Begriff: <strong>${escapeHtml(g.me.word)}</strong></span>`) + `<span class="muted small">verdecken</span>`
       : `<span>Deine Rolle</span><span class="muted small">antippen zum Anzeigen</span>`;
 
@@ -611,6 +616,7 @@
       updateSettings({ impostors: state.settings.impostors + Number(btn.dataset.dir) });
     });
     $("lobby-hint").addEventListener("change", (e) => updateSettings({ hint: e.target.checked }));
+    $("lobby-wordhint").addEventListener("change", (e) => updateSettings({ wordHint: e.target.checked }));
     $("lobby-start").addEventListener("click", () => send({ type: "start" }));
     $("lobby-leave").addEventListener("click", leaveLobby);
 

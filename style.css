@@ -208,6 +208,7 @@ input:focus { border-color: var(--primary); }
 .role-label { font-size: .95rem; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
 .role-word { font-size: 2.2rem; font-weight: 800; word-break: break-word; }
 .role-impostor { font-size: 2.3rem; font-weight: 900; color: #fecaca; }
+.role-hint { margin: 4px 0; padding: 6px 14px; border: 1px dashed var(--border); border-radius: 999px; font-size: .95rem; }
 .next-hint { margin-top: 18px; color: var(--muted); font-size: .9rem; }
 
 /* Karten-Animationen beim Aufdecken */
