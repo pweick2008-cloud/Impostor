@@ -356,8 +356,7 @@ function startGame() {
     key: normalize(name),
     impostor: impostorIdx.has(i),
     out: false,
-    result: null, // Text zum Ausscheiden
-    tips: []
+    result: null // Text zum Ausscheiden
   }));
 
   game = {
@@ -463,7 +462,7 @@ async function onRevealTap() {
 }
 
 /* =========================================================
-   Spielrunde: Tipps reihum, Votes, Verräter-Raten, Ergebnis
+   Spielrunde: Hinweise mündlich, Vote per Antippen, Verräter-Raten, Ergebnis
    ========================================================= */
 const activePlayers = () => game.players.filter((p) => !p.out);
 const activeImpostors = () => game.players.filter((p) => !p.out && p.impostor);
@@ -483,20 +482,13 @@ function fixTurn() {
   if (game.players[game.turn].out) game.turn = nextActiveFrom(game.turn);
 }
 
-// Ein Vote ist möglich, sobald seit dem letzten Vote (bzw. Spielstart)
-// jeder aktive Spieler einen Tipp abgegeben hat.
-const voteReady = () => activePlayers().every((p) => game.sinceVote.has(p.key));
-const tipsUntilVote = () => activePlayers().filter((p) => !game.sinceVote.has(p.key)).length;
-
 function addLog(text) {
   game.log.push(text);
 }
 
 async function startDiscussion() {
   $("reveal-back").innerHTML = ""; // Rolle nicht im DOM stehen lassen
-  game.turn = Math.floor(Math.random() * game.players.length);
-  game.sinceVote = new Set();
-  game.voteUnlocked = false; // wird nach der ersten vollen Runde true
+  game.turn = Math.floor(Math.random() * game.players.length); // wer beginnt
   game.vote = null;
   const starter = game.players[game.turn];
 
@@ -507,7 +499,7 @@ async function startDiscussion() {
     num: 3,
     icon: "",
     title: "Spielrunde",
-    text: `Alle Rollen sind verteilt!\nReihum gibt jeder einen Tipp zum Begriff ab – ohne ihn zu verraten.\nNach jeder vollen Runde könnt ihr einen Vote starten.\n\n${starter.name} beginnt.`,
+    text: `Alle Rollen sind verteilt!\nReihum sagt jeder laut ein Wort zum Begriff – ohne ihn zu verraten.\nHabt ihr einen Verdacht, einigt euch und tippt an, wer rausfliegt.\n\n${starter.name} beginnt.`,
     button: "Los geht's",
     phase: "game"
   });
@@ -521,23 +513,7 @@ function renderGame() {
     : `${active.length} im Spiel · ${game.hiddenCount ? "Verräter: geheim" : `${activeImpostors().length} Verräter übrig`}`;
   $("game-status").textContent = `${active.length}/${game.players.length} aktiv`;
 
-  if (!game.over) {
-    // Wer ist dran?
-    const current = game.players[game.turn];
-    $("turn-name").textContent = current.name;
-    $("tip-input").placeholder = `${current.name}, dein Tipp zum Begriff`;
-
-    // Vote-Bereich
-    const ready = voteReady();
-    $("vote-card").hidden = !game.voteUnlocked;
-    $("btn-vote").hidden = !ready;
-    $("vote-card").classList.toggle("ready", ready);
-    $("vote-status").textContent = ready ? "bereit" : "gesperrt";
-    const left = tipsUntilVote();
-    $("vote-hint").textContent = ready
-      ? "Alle haben einen Tipp abgegeben. Ihr könnt jetzt abstimmen – oder weiter Tipps geben."
-      : `Nächster Vote möglich nach ${left} weiteren ${left === 1 ? "Tipp" : "Tipps"}.`;
-  }
+  if (!game.over) $("turn-name").textContent = game.players[game.turn].name;
 
   // Profile
   const wrap = $("profiles");
@@ -555,14 +531,8 @@ function renderGame() {
       badge = "Raus";
     } else if (i === game.turn) {
       el.classList.add("current");
-      badge = "Am Zug";
-    } else if (game.sinceVote.has(p.key)) {
-      el.classList.add("tipped");
-      badge = "✓ Tipp";
+      badge = "Beginnt";
     }
-    const tips = p.tips.length
-      ? `<ol class="tips">${p.tips.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`
-      : `<p class="tips-empty">Noch kein Tipp</p>`;
     const note = game.over && p.result ? `<p class="profile-note">${escapeHtml(p.result)}</p>` : "";
     el.innerHTML = `
       <div class="profile-head">
@@ -570,7 +540,7 @@ function renderGame() {
         <span class="profile-name">${escapeHtml(p.name)}</span>
         ${badge ? `<span class="badge">${badge}</span>` : ""}
       </div>
-      ${tips}${note}`;
+      ${note}`;
     wrap.appendChild(el);
   });
 
@@ -585,130 +555,48 @@ function renderGame() {
   $("log-card").hidden = game.log.length === 0;
 }
 
-/* ---------- Tipp abgeben ---------- */
-function onTip(e) {
-  e.preventDefault();
-  if (game.over) return;
-  const input = $("tip-input");
-  const text = input.value.trim();
-  if (!text) {
-    input.focus();
-    return;
-  }
-  const p = game.players[game.turn];
-  const wasReady = voteReady();
-  p.tips.push(text);
-  game.sinceVote.add(p.key);
-  game.turn = nextActiveFrom(game.turn);
-  input.value = "";
-
-  if (!wasReady && voteReady()) {
-    game.voteUnlocked = true;
-    addLog("Runde komplett – ein Vote ist jetzt möglich.");
-  }
-  renderGame();
-}
-
 /* ---------- Vote ---------- */
+// Die Gruppe einigt sich mündlich; auf dem Gerät wird nur angetippt, wer raus ist.
 function startVote() {
-  if (game.over || !voteReady()) return;
-  // Abgestimmt wird in Sitzreihenfolge, beginnend beim Spieler am Zug
-  const voters = [];
-  let i = game.turn;
-  do {
-    if (!game.players[i].out) voters.push(game.players[i]);
-    i = (i + 1) % game.players.length;
-  } while (i !== game.turn);
-  game.vote = { voters, index: 0, ballots: new Map(), done: false };
+  if (game.over) return;
+  game.vote = { pending: null, eliminated: null, done: false };
   $("vote-cancel").hidden = false;
   $("vote-panel").hidden = false;
-  showVoteStep("handoff");
+  showVoteStep("choose");
 }
 
 function showVoteStep(step) {
-  const v = game.vote;
-  ["handoff", "choose", "result"].forEach((s) => { $("vote-" + s).hidden = s !== step; });
-  $("vote-progress").textContent = step === "result" ? "Auswertung" : `Stimme ${v.index + 1} von ${v.voters.length}`;
-
-  if (step === "handoff") {
-    const voter = v.voters[v.index];
-    $("vote-voter").textContent = voter.name;
-    $("vote-ready").textContent = `Ich bin ${voter.name} – abstimmen`;
-  }
+  ["choose", "result"].forEach((s) => { $("vote-" + s).hidden = s !== step; });
+  $("vote-progress").textContent = step === "result" ? "Auswertung" : "Abstimmung";
 
   if (step === "choose") {
-    const voter = v.voters[v.index];
-    $("vote-question").textContent = `${voter.name}, wen wählst du raus?`;
+    $("vote-question").textContent = "Wen habt ihr rausgewählt?";
     const opts = $("vote-options");
     opts.innerHTML = "";
     for (const p of activePlayers()) {
-      if (p === voter) continue;
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "btn vote-option";
-      b.textContent = p.name;
-      b.addEventListener("click", () => castBallot(p));
+      const pending = game.vote.pending === p;
+      b.className = "btn vote-option" + (pending ? " danger" : "");
+      // Zweimal tippen, damit niemand aus Versehen rausfliegt
+      b.textContent = pending ? `${p.name} – sicher? Nochmal tippen` : p.name;
+      b.addEventListener("click", () => {
+        if (game.vote.pending === p) finishVote(p);
+        else { game.vote.pending = p; showVoteStep("choose"); }
+      });
       opts.appendChild(b);
     }
-    const abstain = document.createElement("button");
-    abstain.type = "button";
-    abstain.className = "btn ghost vote-option abstain";
-    abstain.textContent = "Enthalten";
-    abstain.addEventListener("click", () => castBallot(null));
-    opts.appendChild(abstain);
   }
   $("vote-panel").querySelector(".overlay-box").scrollTop = 0;
 }
 
-function castBallot(target) {
-  const v = game.vote;
-  v.ballots.set(v.voters[v.index].key, target);
-  v.index++;
-  if (v.index < v.voters.length) showVoteStep("handoff");
-  else finishVote();
-}
-
-function finishVote() {
+function finishVote(eliminated) {
   const v = game.vote;
   v.done = true;
+  v.eliminated = eliminated;
   $("vote-cancel").hidden = true;
 
-  const counts = new Map();
-  let abstentions = 0;
-  for (const target of v.ballots.values()) {
-    if (!target) abstentions++;
-    else counts.set(target, (counts.get(target) || 0) + 1);
-  }
-  const ranking = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  const top = ranking.length ? ranking[0][1] : 0;
-  const leaders = ranking.filter(([, c]) => c === top);
-
-  // Raus ist, wer allein die meisten Stimmen hat – und mehr Stimmen als Enthaltungen.
-  let eliminated = null;
-  if (top > 0 && leaders.length === 1 && top > abstentions) eliminated = leaders[0][0];
-  v.eliminated = eliminated;
-
-  // Auszählung anzeigen
-  const tally = $("vote-tally");
-  tally.innerHTML = "";
-  for (const [p, c] of ranking) {
-    const li = document.createElement("li");
-    li.textContent = `${p.name}: ${c} ${c === 1 ? "Stimme" : "Stimmen"}`;
-    tally.appendChild(li);
-  }
-  if (abstentions) {
-    const li = document.createElement("li");
-    li.textContent = `Enthaltungen: ${abstentions}`;
-    tally.appendChild(li);
-  }
-
-  if (!eliminated) {
-    $("vote-result-emoji").textContent = "";
-    $("vote-result-title").textContent = "Niemand scheidet aus";
-    $("vote-result-text").textContent = top === 0
-      ? "Alle haben sich enthalten."
-      : leaders.length > 1 ? "Gleichstand – keine Entscheidung." : "Die Enthaltungen überwiegen.";
-  } else if (eliminated.impostor) {
+  if (eliminated.impostor) {
     $("vote-result-emoji").textContent = "";
     $("vote-result-title").textContent = `${eliminated.name} war ein Verräter!`;
     $("vote-result-text").textContent = `${eliminated.name} ist raus.`;
@@ -724,18 +612,9 @@ function closeVote() {
   const v = game.vote;
   $("vote-panel").hidden = true;
   game.vote = null;
-  if (!v || !v.done) return; // abgebrochen → Vote nicht verbraucht
+  if (!v || !v.done) return; // abgebrochen
 
-  // Nach einem Vote muss erst wieder jeder einen Tipp abgeben
-  game.sinceVote = new Set();
   const p = v.eliminated;
-
-  if (!p) {
-    addLog("Vote: niemand ist ausgeschieden.");
-    renderGame();
-    return;
-  }
-
   p.out = true;
   if (!p.impostor) {
     p.result = "rausgewählt (war unschuldig)";
@@ -750,7 +629,7 @@ function closeVote() {
     endGame("crew", "Alle Verräter wurden enttarnt.");
     return;
   }
-  fixTurn();
+  game.turn = nextActiveFrom(game.turn); // nächste Runde beginnt der Nächste
   renderGame();
 }
 
@@ -889,9 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btn-start").addEventListener("click", startGame);
   $("reveal-card").addEventListener("click", onRevealTap);
 
-  $("form-tip").addEventListener("submit", onTip);
   $("btn-vote").addEventListener("click", startVote);
-  $("vote-ready").addEventListener("click", () => showVoteStep("choose"));
   $("vote-done").addEventListener("click", closeVote);
   $("vote-cancel").addEventListener("click", closeVote);
 

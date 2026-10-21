@@ -212,21 +212,17 @@
       </div>
 
       <!-- Wer ist dran? -->
-      <form id="form-tip" class="card turn-card in-game" autocomplete="off">
-        <span class="role-label">Am Zug</span>
+      <div class="card turn-card in-game">
+        <span class="role-label">Es beginnt</span>
         <span class="turn-name" id="turn-name"></span>
-        <input id="tip-input" type="text" placeholder="Dein Tipp zum Begriff" maxlength="40" autocomplete="off" spellcheck="false">
-        <button class="btn primary" type="submit">Tipp abgeben</button>
-      </form>
+        <p class="muted small">Reihum sagt jeder laut ein Wort zum Begriff, ohne ihn zu verraten.</p>
+      </div>
 
-      <!-- Vote (erst nach der ersten vollen Runde sichtbar) -->
-      <div id="vote-card" class="card vote-card in-game" hidden>
-        <div class="row-between">
-          <h2>Abstimmung</h2>
-          <span class="pill" id="vote-status"></span>
-        </div>
-        <p class="muted small" id="vote-hint"></p>
-        <button id="btn-vote" class="btn danger" type="button">Vote starten</button>
+      <!-- Vote: die Gruppe einigt sich und tippt an, wer rausfliegt -->
+      <div id="vote-card" class="card vote-card ready in-game">
+        <h2>Abstimmung</h2>
+        <p class="muted small">Habt ihr euch auf jemanden geeinigt? Dann tippt ihn hier an.</p>
+        <button id="btn-vote" class="btn danger" type="button">Jemanden rauswählen</button>
       </div>
 
       <!-- Profile aller Spieler -->
@@ -924,17 +920,10 @@
     </form>
   </div>
 
-  <!-- Abstimmung: Gerät wird reihum weitergegeben, jede Stimme ist geheim -->
+  <!-- Abstimmung: einfach antippen, wer rausgewählt wurde -->
   <div id="vote-panel" class="overlay" hidden>
     <div class="overlay-box">
       <p class="progress" id="vote-progress"></p>
-
-      <div id="vote-handoff" class="vote-step">
-        <span class="hand"></span>
-        <span class="small">Gib das Gerät an</span>
-        <span class="big-name" id="vote-voter"></span>
-        <button id="vote-ready" class="btn primary big" type="button"></button>
-      </div>
 
       <div id="vote-choose" class="vote-step" hidden>
         <h2 id="vote-question"></h2>
@@ -945,11 +934,10 @@
         <span class="hand" id="vote-result-emoji"></span>
         <h2 id="vote-result-title"></h2>
         <p class="muted" id="vote-result-text"></p>
-        <ul id="vote-tally" class="log"></ul>
         <button id="vote-done" class="btn primary big" type="button">Weiter</button>
       </div>
 
-      <button id="vote-cancel" class="btn ghost" type="button">Vote abbrechen</button>
+      <button id="vote-cancel" class="btn ghost" type="button">Abbrechen</button>
     </div>
   </div>
 
