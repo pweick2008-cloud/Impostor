@@ -103,7 +103,8 @@ function sanitizeSettings(input, playerCount) {
     difficulties: resolveDifficulties(input.difficulties || input.difficulty),
     impostors: Math.max(1, Math.floor(Number(input.impostors) || 1)),
     hint: input.hint !== false,
-    wordHint: input.wordHint === true
+    wordHint: input.wordHint === true,
+    randomImpostors: input.randomImpostors === true
   };
   s.impostors = Math.min(s.impostors, Math.max(1, Math.max(playerCount, MIN_PLAYERS) - 1));
   return s;
@@ -201,7 +202,7 @@ function viewFor(lobby, me) {
           startedBy: g.vote.startedBy
         }
       : null,
-    impostorsLeft: activeIds(g).filter((id) => g.impostors.has(id)).length,
+    impostorsLeft: g.hiddenCount && !over ? null : activeIds(g).filter((id) => g.impostors.has(id)).length,
     log: g.log,
     result: over ? { winner: g.winner, reason: g.reason, word: g.word, category: categoryLabel, hint: lobby.settings.wordHint ? g.hint : null } : null
   };
@@ -263,7 +264,9 @@ function startGame(lobby) {
     category,
     order: ids, // Sitzreihenfolge = Reihenfolge in der Lobby
     names,
-    impostors: new Set(shuffle(ids).slice(0, settings.impostors)),
+    // Bei zufälliger Anzahl: 1 bis zur eingestellten Zahl, gleich wahrscheinlich
+    impostors: new Set(shuffle(ids).slice(0, settings.randomImpostors ? 1 + crypto.randomInt(settings.impostors) : settings.impostors)),
+    hiddenCount: settings.randomImpostors,
     out: new Set(),
     results: {},
     tips: Object.fromEntries(ids.map((id) => [id, []])),

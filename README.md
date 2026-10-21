@@ -16,7 +16,7 @@ Auf der Startseite wählt man das Spiel, danach den Modus:
 ## Ablauf
 Das Spiel läuft in drei Phasen (oben als Fortschrittsanzeige sichtbar). Zwischen den Phasen erscheint jeweils ein animierter Übergangsbildschirm.
 
-1. **Start:** Spieleranzahl (3–20) und Namen, Anzahl der Verräter, Kategorien und Schwierigkeiten wählen (jeweils mehrere möglich). Optional sieht der Verräter die Kategorie und/oder bekommt einen **vagen Hinweis** (siehe unten).
+1. **Start:** Spieleranzahl (3–20) und Namen, Anzahl der Verräter, Kategorien und Schwierigkeiten wählen (jeweils mehrere möglich). Optional sieht der Verräter die Kategorie und/oder bekommt einen **vagen Hinweis** (siehe unten). Mit **„Zufällige Anzahl“** wird die Zahl der Verräter jede Runde zwischen 1 und der eingestellten Zahl ausgelost (gleich wahrscheinlich). Sie bleibt bis zum Ende geheim, auch die Anzeige „Verräter übrig“ entfällt.
 2. **Rollen verteilen:** Ein zufälliger Spielername wird angezeigt. Dieser Spieler nimmt das Gerät, tippt auf seinen Namen und sieht seine Rolle (Begriff oder „IMPOSTER“). Erneut tippen → nächster Spieler.
 3. **Spielrunde** (Tipps, Votes und Ergebnis auf einer Seite):
    - Jeder Spieler hat ein Profil, auf dem seine Tipps stehen. Reihum gibt der Spieler, der am Zug ist, einen Tipp ins Textfeld ein.

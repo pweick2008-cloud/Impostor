@@ -17,6 +17,7 @@ const DIFFICULTIES = [
 const settings = {
   names: ["", "", "", ""],
   impostors: 1,
+  randomImpostors: false,
   categories: ["laender"],
   difficulties: ["leicht"],
   hint: true,
@@ -253,6 +254,8 @@ function renderSetup() {
   });
   $("player-count").textContent = settings.names.length;
   $("impostor-count").textContent = settings.impostors;
+  $("impostor-label").textContent = settings.randomImpostors ? "Verräter (höchstens)" : "Verräter";
+  $("opt-randimp").checked = settings.randomImpostors;
 
   // Kategorien und Schwierigkeit (mehrere gleichzeitig möglich)
   const update = (key, list) => { settings[key] = list; saveSettings(); renderSetup(); };
@@ -345,7 +348,9 @@ function startGame() {
   rememberWord(entry);
 
   // Rollen verteilen
-  const impostorIdx = new Set(shuffle(names.map((_, i) => i)).slice(0, settings.impostors));
+  // Bei zufälliger Anzahl: 1 bis zur eingestellten Zahl, gleich wahrscheinlich
+  const impostorCount = settings.randomImpostors ? 1 + Math.floor(Math.random() * settings.impostors) : settings.impostors;
+  const impostorIdx = new Set(shuffle(names.map((_, i) => i)).slice(0, impostorCount));
   const players = names.map((name, i) => ({
     name,
     key: normalize(name),
@@ -367,6 +372,7 @@ function startGame() {
     revealed: false,
     animating: false,
     log: [],
+    hiddenCount: settings.randomImpostors,
     over: false
   };
 
@@ -379,7 +385,7 @@ function startGame() {
     num: 2,
     icon: "",
     title: "Rollen verteilen",
-    text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${settings.impostors} Verräter.`,
+    text: `Das Gerät wandert jetzt reihum.\nJeder schaut sich seine Rolle allein an – ${game.players.length} Spieler, ${game.hiddenCount ? `1 bis ${settings.impostors} Verräter (wie viele, weiß keiner)` : `${settings.impostors} Verräter`}.`,
     button: "Los geht's",
     phase: "reveal"
   }).then(() => hintReady).then(() => {
@@ -512,7 +518,7 @@ function renderGame() {
   const active = activePlayers();
   $("game-sub").textContent = game.over
     ? "Das Spiel ist vorbei."
-    : `${active.length} im Spiel · ${activeImpostors().length} Verräter übrig`;
+    : `${active.length} im Spiel · ${game.hiddenCount ? "Verräter: geheim" : `${activeImpostors().length} Verräter übrig`}`;
   $("game-status").textContent = `${active.length}/${game.players.length} aktiv`;
 
   if (!game.over) {
@@ -809,7 +815,7 @@ async function onGuess(e) {
     emoji: correct ? "" : "",
     title: correct ? `${p.name} hat richtig geraten!` : `${p.name} lag falsch!`,
     text: (correct ? `${p.name} gewinnt persönlich` : `${p.name} hat verloren`) +
-      ` und ist ausgeschieden.\nDer Begriff bleibt geheim – es sind noch ${activeImpostors().length} Verräter im Spiel.`
+      ` und ist ausgeschieden.\nDer Begriff bleibt geheim – es sind noch ${game.hiddenCount ? "" : `${activeImpostors().length} `}Verräter im Spiel.`
   });
 }
 
@@ -879,6 +885,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".stepper").forEach((s) => s.addEventListener("click", onStep));
   $("opt-hint").addEventListener("change", (e) => { settings.hint = e.target.checked; saveSettings(); });
   $("opt-wordhint").addEventListener("change", (e) => { settings.wordHint = e.target.checked; saveSettings(); });
+  $("opt-randimp").addEventListener("change", (e) => { settings.randomImpostors = e.target.checked; saveSettings(); renderSetup(); });
   $("btn-start").addEventListener("click", startGame);
   $("reveal-card").addEventListener("click", onRevealTap);
 

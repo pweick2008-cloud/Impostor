@@ -132,13 +132,17 @@
 
       <div class="card">
         <div class="row-between">
-          <h2>Verräter</h2>
+          <h2 id="impostor-label">Verräter</h2>
           <div class="stepper">
             <button type="button" data-step="impostors" data-dir="-1" aria-label="Weniger Verräter">−</button>
             <span id="impostor-count">1</span>
             <button type="button" data-step="impostors" data-dir="1" aria-label="Mehr Verräter">+</button>
           </div>
         </div>
+        <label class="toggle">
+          <input type="checkbox" id="opt-randimp">
+          <span>Zufällige Anzahl (1 bis zur gewählten Zahl, bleibt geheim)</span>
+        </label>
       </div>
 
       <div class="card">
@@ -728,13 +732,17 @@
           <span class="pill" id="lobby-host-pill"></span>
         </div>
         <div class="row-between">
-          <span>Verräter</span>
+          <span id="lobby-impostor-label">Verräter</span>
           <div class="stepper" id="lobby-imp-stepper">
             <button type="button" data-dir="-1" aria-label="Weniger Verräter">−</button>
             <span id="lobby-impostors">1</span>
             <button type="button" data-dir="1" aria-label="Mehr Verräter">+</button>
           </div>
         </div>
+        <label class="toggle">
+          <input type="checkbox" id="lobby-randimp">
+          <span>Zufällige Anzahl (1 bis zur gewählten Zahl, bleibt geheim)</span>
+        </label>
         <span class="muted small">Kategorien (mehrere möglich)</span>
         <div id="lobby-categories" class="chips"></div>
         <span class="muted small">Schwierigkeit (mehrere möglich)</span>

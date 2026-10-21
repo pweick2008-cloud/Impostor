@@ -247,6 +247,9 @@
     const s = state.settings;
     $("lobby-host-pill").textContent = host ? "Du bist Host" : "Nur der Host kann ändern";
     $("lobby-impostors").textContent = s.impostors;
+    $("lobby-impostor-label").textContent = s.randomImpostors ? "Verräter (höchstens)" : "Verräter";
+    $("lobby-randimp").checked = !!s.randomImpostors;
+    $("lobby-randimp").disabled = !host;
     $("lobby-imp-stepper").classList.toggle("disabled", !host);
 
     const cats = $("lobby-categories");
@@ -370,7 +373,7 @@
     const iAmActive = !g.me.out;
 
     screen.classList.toggle("over", over);
-    $("o-sub").textContent = over ? "Das Spiel ist vorbei." : `${active.length} im Spiel · ${g.impostorsLeft} Verräter übrig`;
+    $("o-sub").textContent = over ? "Das Spiel ist vorbei." : `${active.length} im Spiel · ${g.impostorsLeft === null ? "Verräter: geheim" : `${g.impostorsLeft} Verräter übrig`}`;
     $("o-status").textContent = `${active.length}/${g.players.length} aktiv`;
 
     // Ergebnis
@@ -609,6 +612,7 @@
     });
     $("lobby-hint").addEventListener("change", (e) => updateSettings({ hint: e.target.checked }));
     $("lobby-wordhint").addEventListener("change", (e) => updateSettings({ wordHint: e.target.checked }));
+    $("lobby-randimp").addEventListener("change", (e) => updateSettings({ randomImpostors: e.target.checked }));
     $("lobby-start").addEventListener("click", () => send({ type: "start" }));
     $("lobby-leave").addEventListener("click", leaveLobby);
 
