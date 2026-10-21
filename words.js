@@ -2,8 +2,10 @@
 // Alternative Schreibweisen werden mit "|" getrennt – der erste Eintrag wird angezeigt,
 // alle weiteren werden beim Raten des Imposters ebenfalls als richtig akzeptiert.
 // "person: true" bedeutet: beim Raten reicht auch der Nachname (z. B. "Einstein").
+// WORD_SOURCES sind die Einzellisten (Wer bin ich? und die Hinweise nutzen sie direkt),
+// CATEGORIES die Auswahl beim Verräter, in der einige Listen zusammengefasst sind.
 
-const CATEGORIES = {
+const WORD_SOURCES = {
   laender: {
     name: "Länder",
     icon: "",
@@ -553,4 +555,60 @@ const CATEGORIES = {
   }
 };
 
-if (typeof module !== "undefined") module.exports = { CATEGORIES };
+// Zusammengefasste Kategorien beim Verräter. Listen unter "onlyHard" kommen
+// komplett in "schwer" und weder bei leicht/mittel noch bei gemischt vor.
+const MERGED_CATEGORIES = {
+  marken: {
+    name: "Marken",
+    from: ["automarken", "modemarken", "lebensmittelmarken", "techmarken", "firmen"]
+  },
+  promis: {
+    name: "Promis",
+    person: true,
+    from: ["geschichte", "politiker", "schauspieler", "musiker", "sportler", "fussballer"],
+    onlyHard: ["streamer"]
+  }
+};
+
+const CATEGORIES = (() => {
+  const result = {};
+  const mergedOf = {};
+  for (const [id, m] of Object.entries(MERGED_CATEGORIES)) {
+    for (const src of [...m.from, ...(m.onlyHard || [])]) mergedOf[src] = id;
+  }
+  for (const src of Object.keys(WORD_SOURCES)) {
+    const id = mergedOf[src];
+    if (!id) { result[src] = WORD_SOURCES[src]; continue; }
+    if (result[id]) continue;
+    const m = MERGED_CATEGORIES[id];
+    const cat = { name: m.name, icon: "", words: { leicht: [], mittel: [], schwer: [] }, sourceOf: {}, onlyHard: [] };
+    if (m.person) cat.person = true;
+    for (const s of m.from) {
+      for (const level of ["leicht", "mittel", "schwer"]) {
+        for (const w of WORD_SOURCES[s].words[level]) { cat.words[level].push(w); cat.sourceOf[w] = s; }
+      }
+    }
+    for (const s of m.onlyHard || []) {
+      for (const w of Object.values(WORD_SOURCES[s].words).flat()) {
+        cat.words.schwer.push(w); cat.onlyHard.push(w); cat.sourceOf[w] = s;
+      }
+    }
+    result[id] = cat;
+  }
+  return result;
+})();
+
+// Ursprüngliche Einzelliste eines Begriffs (für die Hinweise)
+function wordSource(catId, entry) {
+  const c = CATEGORIES[catId];
+  return (c && c.sourceOf && c.sourceOf[entry]) || catId;
+}
+
+// Gespeicherte Einstellungen mit alten Kategorie-IDs weiter nutzen
+function resolveCategory(id) {
+  if (id === "zufall" || CATEGORIES[id]) return id;
+  const merged = Object.keys(MERGED_CATEGORIES).find((m) => CATEGORIES[m].sourceOf && Object.values(CATEGORIES[m].sourceOf).includes(id));
+  return merged || null;
+}
+
+if (typeof module !== "undefined") module.exports = { CATEGORIES, WORD_SOURCES, wordSource, resolveCategory };

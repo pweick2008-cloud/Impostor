@@ -11,7 +11,7 @@
 // Zufällige Vorschläge aus den Personen-Kategorien
 function randomPerson(exclude = []) {
   const pool = ["musiker", "schauspieler", "politiker", "geschichte", "streamer"]
-    .flatMap((id) => Object.values(CATEGORIES[id].words).flat())
+    .flatMap((id) => Object.values(WORD_SOURCES[id].words).flat())
     .map(displayWord);
   const taken = new Set(exclude.map(normalize));
   const free = pool.filter((p) => !taken.has(normalize(p)));

@@ -70,7 +70,7 @@ function pickWord(categories, categoryId, difficulty, usedWords) {
   const catId = categoryId === "zufall" || !categories[categoryId] ? pick(Object.keys(categories)) : categoryId;
   const category = categories[catId];
   const pool = difficulty === "gemischt" || !category.words[difficulty]
-    ? [...category.words.leicht, ...category.words.mittel, ...category.words.schwer]
+    ? [...category.words.leicht, ...category.words.mittel, ...category.words.schwer.filter((w) => !(category.onlyHard || []).includes(w))]
     : category.words[difficulty];
   const used = new Set(usedWords || []);
   const fresh = pool.filter((w) => !used.has(w));

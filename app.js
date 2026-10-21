@@ -40,7 +40,7 @@ function loadSettings() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.names)) Object.assign(settings, saved);
   } catch (e) { /* ohne Speicher geht's auch */ }
-  if (!CATEGORIES[settings.category] && settings.category !== "zufall") settings.category = "laender";
+  settings.category = resolveCategory(settings.category) || "laender";
   if (!DIFFICULTIES.some((d) => d.id === settings.difficulty)) settings.difficulty = "leicht";
   settings.names = settings.names.slice(0, MAX_PLAYERS);
   while (settings.names.length < MIN_PLAYERS) settings.names.push("");
@@ -366,7 +366,7 @@ function startGame() {
 
   // Hinweisliste erst jetzt nachladen – vorher braucht sie niemand
   const hintReady = !settings.wordHint ? Promise.resolve() : loadVerraeterHints()
-    .then(() => { game.hint = verraeterHint(catId, game.word); })
+    .then(() => { game.hint = verraeterHint(wordSource(catId, entry), game.word); })
     .catch(() => { /* ohne Hinweis spielen */ });
 
   showPhase({

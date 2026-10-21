@@ -112,9 +112,14 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 
 ## Kategorien (Verräter)
 
-20 Kategorien mit insgesamt 1.460 Begriffen, jeweils **leicht**, **mittel** und **schwer** (oder gemischt bzw. zufällige Kategorie):
+10 Kategorien mit insgesamt 1.460 Begriffen, jeweils **leicht**, **mittel** und **schwer** (oder gemischt bzw. zufällige Kategorie):
 
-Länder · Städte · Automarken · Historische Persönlichkeiten · Politiker · Schauspieler · Musiker & Bands · Deutsche Streamer · Obst & Gemüse · Tiere · Fußballer · Sportler (ohne Fußball) · Sehenswürdigkeiten · Berufe · Modemarken · Lebensmittelmarken · Techmarken · Firmen · Filme & Serien · Animes
+Länder · Städte · Marken · Promis · Obst & Gemüse · Tiere · Sehenswürdigkeiten · Berufe · Filme & Serien · Animes
+
+- **Marken** fasst Auto-, Mode-, Lebensmittel- und Techmarken sowie Firmen zusammen.
+- **Promis** fasst historische Persönlichkeiten, Politiker, Schauspieler, Musiker & Bands, Sportler und Fußballer zusammen. **Deutsche Streamer** kommen nur bei der Schwierigkeit *schwer* dazu (nicht bei leicht, mittel oder gemischt).
+
+In `words.js` bleiben die Einzellisten erhalten (`WORD_SOURCES`, für Wer bin ich? und die Hinweise). `MERGED_CATEGORIES` legt fest, welche Listen beim Verräter zusammengefasst werden.
 
 Eigene Begriffe lassen sich in `words.js` ergänzen – Browser und Server benutzen dieselbe Datei.
 
@@ -122,4 +127,4 @@ Eigene Begriffe lassen sich in `words.js` ergänzen – Browser und Server benut
 
 Wenn die Einstellung „Verräter bekommt einen vagen Hinweis“ an ist, sieht der Verräter auf seiner Rollenkarte ein Stichwort zum Begriff, zum Beispiel *Linksverkehr* bei Großbritannien. Der Hinweis passt absichtlich auch zu mehreren anderen Begriffen der Kategorie. Er nennt nie das bekannteste Merkmal, keinen Slogan, kein Logo und keinen Namensteil. Am Ende der Runde sehen alle, welcher Hinweis es war.
 
-Die Hinweise stehen in `verraeter-hints.js` (Schlüssel: Kategorie-ID und angezeigter Begriff). Online kennt sie nur der Server: Er schickt den Hinweis allein an die Verräter, sonst ließe sich der Begriff in der Liste nachschlagen. Bei Pass & Play wird die Datei erst beim Spielstart nachgeladen. Ein neuer Begriff in `words.js` braucht dort auch einen Hinweis, sonst spielt der Verräter ohne.
+Die Hinweise stehen in `verraeter-hints.js` (Schlüssel: Einzelliste aus `WORD_SOURCES` und angezeigter Begriff). Online kennt sie nur der Server: Er schickt den Hinweis allein an die Verräter, sonst ließe sich der Begriff in der Liste nachschlagen. Bei Pass & Play wird die Datei erst beim Spielstart nachgeladen. Ein neuer Begriff in `words.js` braucht dort auch einen Hinweis, sonst spielt der Verräter ohne.

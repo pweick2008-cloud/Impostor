@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { CATEGORIES } = require("./words.js");
+const { CATEGORIES, WORD_SOURCES, wordSource, resolveCategory } = require("./words.js");
 const { shuffle, pick, normalize, levenshtein, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 const { SpiegelRules } = require("./spiegel-rules.js");
 const { verraeterHint } = require("./verraeter-hints.js");
@@ -100,7 +100,7 @@ function cleanName(name) {
 
 function sanitizeSettings(input, playerCount) {
   const s = {
-    category: CATEGORIES[input.category] || input.category === "zufall" ? input.category : "laender",
+    category: resolveCategory(input.category) || "laender",
     difficulty: DIFFICULTIES.includes(input.difficulty) ? input.difficulty : "leicht",
     impostors: Math.max(1, Math.floor(Number(input.impostors) || 1)),
     hint: input.hint !== false,
@@ -259,7 +259,7 @@ function startGame(lobby) {
     phase: "reveal",
     entry,
     word: displayWord(entry),
-    hint: verraeterHint(catId, displayWord(entry)),
+    hint: verraeterHint(wordSource(catId, entry), displayWord(entry)),
     categoryId: catId,
     category,
     order: ids, // Sitzreihenfolge = Reihenfolge in der Lobby
@@ -678,7 +678,7 @@ function leaveCurrent(ws) {
    ========================================================= */
 function randomPerson(exclude = []) {
   const pool = ["musiker", "schauspieler", "politiker", "geschichte", "streamer"]
-    .flatMap((id) => Object.values(CATEGORIES[id].words).flat())
+    .flatMap((id) => Object.values(WORD_SOURCES[id].words).flat())
     .map(displayWord);
   const taken = new Set(exclude.map(normalize));
   const free = pool.filter((p) => !taken.has(normalize(p)));
