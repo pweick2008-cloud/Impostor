@@ -250,19 +250,11 @@
     $("lobby-imp-stepper").classList.toggle("disabled", !host);
 
     const cats = $("lobby-categories");
-    cats.innerHTML = "";
-    const catOptions = Object.entries(CATEGORIES).map(([id, c]) => ({ id, label: `${c.icon} ${c.name}` }));
-    catOptions.push({ id: "zufall", label: "Zufällig" });
-    for (const opt of catOptions) {
-      cats.appendChild(makeChip(opt.label, s.category === opt.id, host ? () => updateSettings({ category: opt.id }) : null));
-    }
+    renderMultiChips(cats, categoryOptions(), s.categories, "Kategorie", host ? (l) => updateSettings({ categories: l }) : null);
     cats.classList.toggle("static", !host);
 
     const diffs = $("lobby-difficulties");
-    diffs.innerHTML = "";
-    for (const d of DIFFICULTIES) {
-      diffs.appendChild(makeChip(d.name, s.difficulty === d.id, host ? () => updateSettings({ difficulty: d.id }) : null));
-    }
+    renderMultiChips(diffs, DIFFICULTIES, s.difficulties, "Schwierigkeit", host ? (l) => updateSettings({ difficulties: l }) : null);
     diffs.classList.toggle("static", !host);
 
     $("lobby-hint").checked = s.hint;

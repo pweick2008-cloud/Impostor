@@ -556,7 +556,7 @@ const WORD_SOURCES = {
 };
 
 // Zusammengefasste Kategorien beim Verräter. Listen unter "onlyHard" kommen
-// komplett in "schwer" und weder bei leicht/mittel noch bei gemischt vor.
+// komplett in "schwer" und nie bei leicht oder mittel vor.
 const MERGED_CATEGORIES = {
   marken: {
     name: "Marken",
@@ -604,11 +604,29 @@ function wordSource(catId, entry) {
   return (c && c.sourceOf && c.sourceOf[entry]) || catId;
 }
 
-// Gespeicherte Einstellungen mit alten Kategorie-IDs weiter nutzen
+const DIFFICULTY_IDS = ["leicht", "mittel", "schwer"];
+
+// Gespeicherte Einstellungen weiter nutzen: alte Kategorie-IDs werden umgeleitet,
+// "zufall" bzw. "gemischt" (früher eine eigene Auswahl) heißt jetzt: alles ausgewählt.
 function resolveCategory(id) {
-  if (id === "zufall" || CATEGORIES[id]) return id;
-  const merged = Object.keys(MERGED_CATEGORIES).find((m) => CATEGORIES[m].sourceOf && Object.values(CATEGORIES[m].sourceOf).includes(id));
-  return merged || null;
+  if (CATEGORIES[id]) return id;
+  return Object.keys(MERGED_CATEGORIES).find((m) => MERGED_CATEGORIES[m].from.concat(MERGED_CATEGORIES[m].onlyHard || []).includes(id)) || null;
 }
 
-if (typeof module !== "undefined") module.exports = { CATEGORIES, WORD_SOURCES, wordSource, resolveCategory };
+function resolveCategories(input) {
+  if (input === "zufall") return Object.keys(CATEGORIES);
+  const list = (Array.isArray(input) ? input : [input]).map(resolveCategory).filter(Boolean);
+  const ids = Object.keys(CATEGORIES).filter((id) => list.includes(id));
+  return ids.length ? ids : ["laender"];
+}
+
+function resolveDifficulties(input) {
+  if (input === "gemischt") return DIFFICULTY_IDS.slice();
+  const list = Array.isArray(input) ? input : [input];
+  const ids = DIFFICULTY_IDS.filter((d) => list.includes(d));
+  return ids.length ? ids : ["leicht"];
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { CATEGORIES, WORD_SOURCES, DIFFICULTY_IDS, wordSource, resolveCategories, resolveDifficulties };
+}

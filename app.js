@@ -11,15 +11,14 @@ const USED_KEY = "imposter-used-words-v1";
 const DIFFICULTIES = [
   { id: "leicht", name: "Leicht" },
   { id: "mittel", name: "Mittel" },
-  { id: "schwer", name: "Schwer" },
-  { id: "gemischt", name: "Gemischt" }
+  { id: "schwer", name: "Schwer" }
 ];
 
 const settings = {
   names: ["", "", "", ""],
   impostors: 1,
-  category: "laender",
-  difficulty: "leicht",
+  categories: ["laender"],
+  difficulties: ["leicht"],
   hint: true,
   wordHint: false
 };
@@ -40,8 +39,11 @@ function loadSettings() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.names)) Object.assign(settings, saved);
   } catch (e) { /* ohne Speicher geht's auch */ }
-  settings.category = resolveCategory(settings.category) || "laender";
-  if (!DIFFICULTIES.some((d) => d.id === settings.difficulty)) settings.difficulty = "leicht";
+  // Ältere Speicherstände haben noch eine einzelne "category"/"difficulty"
+  settings.categories = resolveCategories(settings.category !== undefined ? settings.category : settings.categories);
+  settings.difficulties = resolveDifficulties(settings.difficulty !== undefined ? settings.difficulty : settings.difficulties);
+  delete settings.category;
+  delete settings.difficulty;
   settings.names = settings.names.slice(0, MAX_PLAYERS);
   while (settings.names.length < MIN_PLAYERS) settings.names.push("");
   clampImpostors();
@@ -252,33 +254,37 @@ function renderSetup() {
   $("player-count").textContent = settings.names.length;
   $("impostor-count").textContent = settings.impostors;
 
-  // Kategorien
-  const cats = $("category-list");
-  cats.innerHTML = "";
-  const catOptions = Object.entries(CATEGORIES).map(([id, c]) => ({ id, label: `${c.icon} ${c.name}` }));
-  catOptions.push({ id: "zufall", label: "Zufällig" });
-  for (const opt of catOptions) {
-    cats.appendChild(makeChip(opt.label, settings.category === opt.id, () => {
-      settings.category = opt.id;
-      saveSettings();
-      renderSetup();
-    }));
-  }
-
-  // Schwierigkeit
-  const diffs = $("difficulty-list");
-  diffs.innerHTML = "";
-  for (const d of DIFFICULTIES) {
-    diffs.appendChild(makeChip(d.name, settings.difficulty === d.id, () => {
-      settings.difficulty = d.id;
-      saveSettings();
-      renderSetup();
-    }));
-  }
+  // Kategorien und Schwierigkeit (mehrere gleichzeitig möglich)
+  const update = (key, list) => { settings[key] = list; saveSettings(); renderSetup(); };
+  renderMultiChips($("category-list"), categoryOptions(), settings.categories, "Kategorie", (l) => update("categories", l));
+  renderMultiChips($("difficulty-list"), DIFFICULTIES, settings.difficulties, "Schwierigkeit", (l) => update("difficulties", l));
 
   $("opt-hint").checked = settings.hint;
   $("opt-wordhint").checked = settings.wordHint;
   $("setup-error").hidden = true;
+}
+
+function categoryOptions() {
+  return Object.entries(CATEGORIES).map(([id, c]) => ({ id, name: `${c.icon} ${c.name}`.trim() }));
+}
+
+// Chips zum An- und Abwählen; mindestens einer bleibt immer ausgewählt.
+// onChange = null: nur anzeigen (z. B. für Nicht-Hosts in der Lobby)
+function renderMultiChips(box, options, selected, what, onChange) {
+  box.innerHTML = "";
+  const all = options.map((o) => o.id);
+  const ordered = (list) => all.filter((id) => list.includes(id));
+  for (const opt of options) {
+    const on = selected.includes(opt.id);
+    box.appendChild(makeChip(opt.name, on, onChange ? () => {
+      if (on && selected.length === 1) return showToast(`Mindestens eine ${what} muss ausgewählt bleiben.`);
+      onChange(ordered(on ? selected.filter((id) => id !== opt.id) : [...selected, opt.id]));
+    } : null));
+  }
+  if (options.length > 3) {
+    const allOn = selected.length === all.length;
+    box.appendChild(makeChip("Alle", allOn, onChange ? () => onChange(allOn ? [all[0]] : all) : null));
+  }
 }
 
 function makeChip(label, selected, onClick) {
@@ -335,7 +341,7 @@ function startGame() {
   if (settings.impostors >= names.length) return setupError("Es muss mindestens einen normalen Spieler geben.");
 
   // Begriff auswählen
-  const { catId, category, entry } = pickWord(CATEGORIES, settings.category, settings.difficulty, getUsedWords());
+  const { catId, category, entry } = pickWord(CATEGORIES, settings.categories, settings.difficulties, getUsedWords());
   rememberWord(entry);
 
   // Rollen verteilen

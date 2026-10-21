@@ -66,12 +66,14 @@ function displayWord(entry) {
 }
 
 // Wählt einen Begriff aus Kategorie + Schwierigkeit und meidet kürzlich gespielte Begriffe.
-function pickWord(categories, categoryId, difficulty, usedWords) {
-  const catId = categoryId === "zufall" || !categories[categoryId] ? pick(Object.keys(categories)) : categoryId;
+// Erst eine der gewählten Kategorien, dann eine der gewählten Stufen –
+// jeweils gleich wahrscheinlich, egal wie viele Begriffe darin stecken.
+function pickWord(categories, categoryIds, difficulties, usedWords) {
+  const ids = categoryIds.filter((id) => categories[id]);
+  const catId = pick(ids.length ? ids : Object.keys(categories));
   const category = categories[catId];
-  const pool = difficulty === "gemischt" || !category.words[difficulty]
-    ? [...category.words.leicht, ...category.words.mittel, ...category.words.schwer.filter((w) => !(category.onlyHard || []).includes(w))]
-    : category.words[difficulty];
+  const levels = difficulties.filter((d) => category.words[d] && category.words[d].length);
+  const pool = category.words[pick(levels.length ? levels : Object.keys(category.words))];
   const used = new Set(usedWords || []);
   const fresh = pool.filter((w) => !used.has(w));
   return { catId, category, entry: pick(fresh.length ? fresh : pool) };

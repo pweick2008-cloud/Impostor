@@ -1109,3 +1109,4 @@ html[data-theme="draw"] h2 { font-size: 1.3rem; font-weight: 400; }
 html[data-theme="werbinich"] h2, html[data-theme="werbinich"] .mode-title { font-family: var(--body); font-weight: 700; }
 .draw-choice { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .draw-choice small { font-size: .72rem; font-weight: 600; opacity: .75; }
+.card h2 .small { margin-left: 6px; font-family: Figtree, system-ui, sans-serif; font-style: normal; font-weight: 400; letter-spacing: 0; text-transform: none; }

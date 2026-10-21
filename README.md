@@ -16,7 +16,7 @@ Auf der Startseite wählt man das Spiel, danach den Modus:
 ## Ablauf
 Das Spiel läuft in drei Phasen (oben als Fortschrittsanzeige sichtbar). Zwischen den Phasen erscheint jeweils ein animierter Übergangsbildschirm.
 
-1. **Start:** Spieleranzahl (3–20) und Namen, Anzahl der Verräter, Kategorie und Schwierigkeit wählen. Optional sieht der Verräter die Kategorie und/oder bekommt einen **vagen Hinweis** (siehe unten).
+1. **Start:** Spieleranzahl (3–20) und Namen, Anzahl der Verräter, Kategorien und Schwierigkeiten wählen (jeweils mehrere möglich). Optional sieht der Verräter die Kategorie und/oder bekommt einen **vagen Hinweis** (siehe unten).
 2. **Rollen verteilen:** Ein zufälliger Spielername wird angezeigt. Dieser Spieler nimmt das Gerät, tippt auf seinen Namen und sieht seine Rolle (Begriff oder „IMPOSTER“). Erneut tippen → nächster Spieler.
 3. **Spielrunde** (Tipps, Votes und Ergebnis auf einer Seite):
    - Jeder Spieler hat ein Profil, auf dem seine Tipps stehen. Reihum gibt der Spieler, der am Zug ist, einen Tipp ins Textfeld ein.
@@ -112,12 +112,12 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 
 ## Kategorien (Verräter)
 
-10 Kategorien mit insgesamt 1.460 Begriffen, jeweils **leicht**, **mittel** und **schwer** (oder gemischt bzw. zufällige Kategorie):
+10 Kategorien mit insgesamt 1.460 Begriffen, jeweils **leicht**, **mittel** und **schwer**. Kategorien und Schwierigkeiten lassen sich beliebig kombinieren (mehrere gleichzeitig antippen, „Alle“ wählt alle Kategorien). Für jede Runde wird zuerst eine der gewählten Kategorien und dann eine der gewählten Stufen ausgelost, jeweils gleich wahrscheinlich:
 
 Länder · Städte · Marken · Promis · Obst & Gemüse · Tiere · Sehenswürdigkeiten · Berufe · Filme & Serien · Animes
 
 - **Marken** fasst Auto-, Mode-, Lebensmittel- und Techmarken sowie Firmen zusammen.
-- **Promis** fasst historische Persönlichkeiten, Politiker, Schauspieler, Musiker & Bands, Sportler und Fußballer zusammen. **Deutsche Streamer** kommen nur bei der Schwierigkeit *schwer* dazu (nicht bei leicht, mittel oder gemischt).
+- **Promis** fasst historische Persönlichkeiten, Politiker, Schauspieler, Musiker & Bands, Sportler und Fußballer zusammen. **Deutsche Streamer** kommen nur dazu, wenn *schwer* ausgewählt ist.
 
 In `words.js` bleiben die Einzellisten erhalten (`WORD_SOURCES`, für Wer bin ich? und die Hinweise). `MERGED_CATEGORIES` legt fest, welche Listen beim Verräter zusammengefasst werden.
 

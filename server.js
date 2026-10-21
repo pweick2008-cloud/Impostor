@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { CATEGORIES, WORD_SOURCES, wordSource, resolveCategory } = require("./words.js");
+const { CATEGORIES, WORD_SOURCES, wordSource, resolveCategories, resolveDifficulties } = require("./words.js");
 const { shuffle, pick, normalize, levenshtein, isCorrectGuess, displayWord, pickWord } = require("./shared.js");
 const { SpiegelRules } = require("./spiegel-rules.js");
 const { verraeterHint } = require("./verraeter-hints.js");
@@ -23,7 +23,6 @@ const MAX_PLAYERS_BY_GAME = { verraeter: 20, werbinich: 20, luegen: 2, slf: 20, 
 const GAME_TYPES = ["verraeter", "werbinich", "luegen", "slf", "draw"];
 const MAX_PLAYERS = 20;
 const LOBBY_IDLE_MS = 30 * 60 * 1000; // leere Lobbys werden nach 30 Min. gelöscht
-const DIFFICULTIES = ["leicht", "mittel", "schwer", "gemischt"];
 
 /* =========================================================
    Statische Dateien
@@ -100,8 +99,8 @@ function cleanName(name) {
 
 function sanitizeSettings(input, playerCount) {
   const s = {
-    category: resolveCategory(input.category) || "laender",
-    difficulty: DIFFICULTIES.includes(input.difficulty) ? input.difficulty : "leicht",
+    categories: resolveCategories(input.categories || input.category),
+    difficulties: resolveDifficulties(input.difficulties || input.difficulty),
     impostors: Math.max(1, Math.floor(Number(input.impostors) || 1)),
     hint: input.hint !== false,
     wordHint: input.wordHint === true
@@ -249,7 +248,7 @@ function startGame(lobby) {
   const settings = sanitizeSettings(lobby.settings, players.length);
   lobby.settings = settings;
 
-  const { catId, category, entry } = pickWord(CATEGORIES, settings.category, settings.difficulty, lobby.usedWords);
+  const { catId, category, entry } = pickWord(CATEGORIES, settings.categories, settings.difficulties, lobby.usedWords);
   lobby.usedWords = [...lobby.usedWords.filter((w) => w !== entry), entry].slice(-150);
 
   const ids = players.map((p) => p.id);
