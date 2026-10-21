@@ -219,25 +219,37 @@ const WORD_SOURCES = {
   },
 
   essen: {
-    name: "Obst & Gemüse",
+    name: "Lebensmittel",
     icon: "",
     words: {
       leicht: [
         "Apfel", "Banane", "Erdbeere", "Kirsche", "Birne", "Orange|Apfelsine", "Zitrone", "Tomate",
         "Gurke", "Karotte|Möhre|Mohrrübe", "Kartoffel", "Paprika", "Zwiebel", "Weintraube|Traube",
-        "Wassermelone|Melone", "Ananas", "Brokkoli|Broccoli", "Salat|Kopfsalat", "Mais", "Pfirsich"
+        "Wassermelone|Melone", "Ananas", "Brokkoli|Broccoli", "Salat|Kopfsalat", "Mais", "Pfirsich",
+        "Brot", "Brötchen|Semmel|Schrippe", "Brezel|Breze|Brezn", "Käse", "Butter", "Ei|Eier", "Milch",
+        "Honig", "Nudeln|Pasta", "Reis", "Pizza", "Pommes|Pommes frites", "Schokolade",
+        "Pfannkuchen|Eierkuchen", "Suppe", "Hamburger|Burger", "Würstchen|Wurst", "Joghurt", "Kuchen",
+        "Eis|Speiseeis|Eiscreme", "Müsli", "Salz", "Popcorn"
       ],
       mittel: [
         "Mango", "Kiwi", "Zucchini", "Aubergine", "Blumenkohl", "Spinat", "Himbeere",
         "Heidelbeere|Blaubeere", "Granatapfel", "Avocado", "Kokosnuss", "Feige", "Pflaume|Zwetschge",
         "Aprikose|Marille", "Rosenkohl", "Spargel", "Lauch|Porree", "Kürbis", "Radieschen",
-        "Sellerie", "Rote Bete|Rote Beete", "Grapefruit", "Kohlrabi"
+        "Sellerie", "Rote Bete|Rote Beete", "Grapefruit", "Kohlrabi",
+        "Schnitzel", "Currywurst", "Döner|Döner Kebab|Kebab", "Lasagne", "Sushi", "Spaghetti",
+        "Croissant", "Baguette", "Kartoffelsalat", "Raclette", "Fondue", "Knödel|Klöße|Kloß", "Spätzle",
+        "Sauerkraut", "Lebkuchen", "Quark", "Tofu", "Falafel", "Pesto", "Waffel|Waffeln", "Rührei",
+        "Gulasch"
       ],
       schwer: [
         "Pastinake", "Topinambur", "Mangold", "Romanesco", "Schwarzwurzel", "Physalis", "Litschi",
         "Kaki|Sharonfrucht", "Drachenfrucht|Pitaya", "Kumquat", "Maracuja|Passionsfrucht", "Okra",
         "Artischocke", "Fenchel", "Stachelbeere", "Quitte", "Johannisbeere", "Rhabarber",
-        "Steckrübe", "Pak Choi", "Mirabelle", "Sternfrucht|Karambole", "Papaya", "Chicorée|Chicoree"
+        "Steckrübe", "Pak Choi", "Mirabelle", "Sternfrucht|Karambole", "Papaya", "Chicorée|Chicoree",
+        "Kimchi", "Hummus", "Tiramisu", "Gazpacho", "Labskaus", "Saumagen", "Pumpernickel",
+        "Kaiserschmarrn|Kaiserschmarren", "Ramen", "Couscous", "Polenta", "Risotto", "Tempeh",
+        "Halloumi", "Tahini|Tahin", "Miso", "Ceviche", "Schupfnudeln", "Maultaschen", "Flammkuchen",
+        "Grünkohl", "Tapenade"
       ]
     }
   },

@@ -110,9 +110,9 @@ Beim Raten spielen Groß-/Kleinschreibung, Umlaute und kleine Tippfehler keine R
 
 ## Kategorien (Verräter)
 
-10 Kategorien mit insgesamt 1.460 Begriffen, jeweils **leicht**, **mittel** und **schwer**. Kategorien und Schwierigkeiten lassen sich beliebig kombinieren (mehrere gleichzeitig antippen, „Alle“ wählt alle Kategorien). Für jede Runde wird zuerst eine der gewählten Kategorien und dann eine der gewählten Stufen ausgelost, jeweils gleich wahrscheinlich:
+10 Kategorien mit insgesamt 1.527 Begriffen, jeweils **leicht**, **mittel** und **schwer**. Kategorien und Schwierigkeiten lassen sich beliebig kombinieren (mehrere gleichzeitig antippen, „Alle“ wählt alle Kategorien). Für jede Runde wird zuerst eine der gewählten Kategorien und dann eine der gewählten Stufen ausgelost, jeweils gleich wahrscheinlich:
 
-Länder · Städte · Marken · Promis · Obst & Gemüse · Tiere · Sehenswürdigkeiten · Berufe · Filme & Serien · Animes
+Länder · Städte · Marken · Promis · Lebensmittel · Tiere · Sehenswürdigkeiten · Berufe · Filme & Serien · Animes
 
 - **Marken** fasst Auto-, Mode-, Lebensmittel- und Techmarken sowie Firmen zusammen.
 - **Promis** fasst historische Persönlichkeiten, Politiker, Schauspieler, Musiker & Bands, Sportler und Fußballer zusammen. **Deutsche Streamer** kommen nur dazu, wenn *schwer* ausgewählt ist.
